@@ -2,6 +2,8 @@ package com.unimobili.api.services;
 
 import com.unimobili.api.domain.visita.Visita;
 import com.unimobili.api.domain.visita.VisitaRequestDTO;
+import com.unimobili.api.repositories.VisitaRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -9,6 +11,10 @@ import java.time.ZoneOffset;
 
 @Service
 public class VisitaService {
+
+    @Autowired
+    private VisitaRepository repository;
+
     public Visita createVisita(VisitaRequestDTO data){
         Visita novaVisita = new Visita();
         novaVisita.setCriado_em(OffsetDateTime.now());
@@ -21,6 +27,8 @@ public class VisitaService {
         novaVisita.setObservacoes(data.observacoes());
         novaVisita.setStatus("Marcada");
         novaVisita.setAtiva(Boolean.TRUE);
+
+        repository.save(novaVisita);
 
         return novaVisita;
     }
