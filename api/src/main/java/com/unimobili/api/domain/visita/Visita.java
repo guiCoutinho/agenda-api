@@ -41,7 +41,5 @@ public class Visita {
 
     private String status;
 
-    private String duracao;
-
     private Boolean ativa;
 }
