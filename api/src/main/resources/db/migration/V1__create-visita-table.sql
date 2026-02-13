@@ -1,7 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE visita (
-    id UUID get_random_uuid() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     criado_em TIMESTAMP WITH TIME ZONE,
     data_hora TIMESTAMP WITH TIME ZONE,
     criado_por VARCHAR(100) NOT NULL,
