@@ -2,12 +2,17 @@ package com.unimobili.api.services;
 
 import com.unimobili.api.domain.visita.Visita;
 import com.unimobili.api.domain.visita.VisitaRequestDTO;
+import com.unimobili.api.domain.visita.VisitaResponseDTO;
 import com.unimobili.api.repositories.VisitaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 
 @Service
 public class VisitaService {
@@ -31,5 +36,11 @@ public class VisitaService {
         repository.save(novaVisita);
 
         return novaVisita;
+    }
+
+    public List<VisitaResponseDTO> getVisitas(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Visita> visitasPage = this.repository.findAll(pageable);
+        return visitasPage.map(visita -> new VisitaResponseDTO(visita.getId(), visita.getCriado_em(),visita.getData_hora(), visita.getCriado_por(), visita.getDesignado_a(), visita.getNome_cliente(), visita.getTelefone_cliente(), visita.getChaves(), visita.getObservacoes(), visita.getStatus(), visita.getAtiva())).stream().toList();
     }
 }
