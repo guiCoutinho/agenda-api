@@ -25,7 +25,7 @@ public class VisitaController {
 
     @GetMapping
     public ResponseEntity<List<VisitaResponseDTO>> getVisitas(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
-        List<VisitaResponseDTO> allVisitas = this.visitaService.getVisitas(page, size);
+        List<VisitaResponseDTO> allVisitas = this.visitaService.getUpcomingVisitas(page, size);
         return ResponseEntity.ok(allVisitas);
     }
 
