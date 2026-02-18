@@ -41,7 +41,7 @@ public class VisitaService {
 
     public List<VisitaResponseDTO> getUpcomingVisitas(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<Visita> visitasPage = this.repository.findUpcomingVisitas(new Date(), pageable);
+        Page<Visita> visitasPage = this.repository.findUpcomingVisitas(OffsetDateTime.now(), pageable);
         return visitasPage.map(visita -> new VisitaResponseDTO(visita.getId(), visita.getCriado_em(),visita.getData_hora(), visita.getCriado_por(), visita.getDesignado_a(), visita.getNome_cliente(), visita.getTelefone_cliente(), visita.getChaves(), visita.getObservacoes(), visita.getStatus(), visita.getAtiva())).stream().toList();
     }
 }

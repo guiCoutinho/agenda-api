@@ -7,11 +7,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.OffsetDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
 public interface VisitaRepository extends JpaRepository<Visita, UUID> {
-    @Query("SELECT v FROM Visita v WHERE v.data_hora >= :currentDate:")
-    public Page<Visita> findUpcomingVisitas(@Param("currentDate")Date currentDate, Pageable pageable);
+    @Query("SELECT v FROM Visita v WHERE v.data_hora >= :currentDate")
+    public Page<Visita> findUpcomingVisitas(@Param("currentDate")OffsetDateTime currentDate, Pageable pageable);
 }
