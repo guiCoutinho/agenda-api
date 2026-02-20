@@ -1,5 +1,6 @@
 package com.unimobili.api.domain.visita;
 
+import com.unimobili.api.domain.enums.StatusVisita;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -39,7 +40,7 @@ public class Visita {
 
     private String observacoes;
 
-    private String status;
+    private StatusVisita status;
 
     private Boolean ativa;
 }

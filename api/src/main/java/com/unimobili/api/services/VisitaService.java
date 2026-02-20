@@ -14,6 +14,8 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
+import static com.unimobili.api.domain.enums.StatusVisita.AGENDADA;
+
 @Service
 public class VisitaService {
 
@@ -30,7 +32,7 @@ public class VisitaService {
         novaVisita.setTelefone_cliente(data.telefone_cliente());
         novaVisita.setChaves(data.chaves());
         novaVisita.setObservacoes(data.observacoes());
-        novaVisita.setStatus("Marcada");
+        novaVisita.setStatus(AGENDADA);
         novaVisita.setAtiva(Boolean.TRUE);
 
         repository.save(novaVisita);
