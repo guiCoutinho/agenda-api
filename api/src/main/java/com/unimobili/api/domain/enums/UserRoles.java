@@ -1,9 +1,9 @@
 package com.unimobili.api.domain.enums;
 
 public enum UserRoles {
-    ADMIN('admin'),
-    ATENDENTE('atendente'),
-    VISITADOR('visitador');
+    ADMIN("admin"),
+    ATENDENTE("atendente"),
+    VISITADOR("visitador");
 
     private String role;
 
