@@ -1,5 +1,7 @@
 package com.unimobili.api.controller;
 
+import com.unimobili.api.domain.infra.security.LoginResponseDTO;
+import com.unimobili.api.domain.infra.security.TokenService;
 import com.unimobili.api.domain.user.AuthenticationDTO;
 import com.unimobili.api.domain.user.RegisterDTO;
 import com.unimobili.api.domain.user.User;
@@ -20,6 +22,9 @@ import jakarta.validation.Valid;
 public class AuthenticationController {
 
     @Autowired
+    private TokenService tokenService;
+
+    @Autowired
     private AuthenticationManager authenticationManager;
 
     @Autowired
@@ -30,7 +35,9 @@ public class AuthenticationController {
         var usernamePassword = new UsernamePasswordAuthenticationToken(data.login(), data.password());
         var auth = this.authenticationManager.authenticate(usernamePassword);
 
-        return ResponseEntity.ok().build();
+        var token = tokenService.generateToken((User) auth.getPrincipal());
+
+        return ResponseEntity.ok(new LoginResponseDTO(token));
     }
 
     @PostMapping("/register")
