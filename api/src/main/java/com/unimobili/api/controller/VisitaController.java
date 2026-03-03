@@ -1,6 +1,5 @@
 package com.unimobili.api.controller;
 
-import com.unimobili.api.domain.visita.Visita;
 import com.unimobili.api.domain.visita.VisitaRequestDTO;
 import com.unimobili.api.domain.visita.VisitaResponseDTO;
 import com.unimobili.api.services.VisitaService;
