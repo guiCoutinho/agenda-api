@@ -18,8 +18,8 @@ public class VisitaController {
     private VisitaService visitaService;
 
     @PostMapping
-    public ResponseEntity<Visita> create(@RequestBody VisitaRequestDTO body) {
-        Visita novaVisita = this.visitaService.createVisita(body);
+    public ResponseEntity<VisitaResponseDTO> create(@RequestBody VisitaRequestDTO body) {
+        VisitaResponseDTO novaVisita = this.visitaService.createVisita(body);
         return ResponseEntity.ok(novaVisita);
     }
 

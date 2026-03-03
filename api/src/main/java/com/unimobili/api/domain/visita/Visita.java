@@ -28,11 +28,11 @@ public class Visita {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "criado_por_id")
-    private User criado_por;
+    private User criadoPor;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "designado_a_id")
-    private User designado_a;
+    private User designadoA;
 
     private String nome_cliente;
 
