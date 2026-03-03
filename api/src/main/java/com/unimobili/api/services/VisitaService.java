@@ -5,9 +5,6 @@ import com.unimobili.api.domain.visita.VisitaRequestDTO;
 import com.unimobili.api.domain.visita.VisitaResponseDTO;
 import com.unimobili.api.repositories.VisitaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import com.unimobili.api.domain.user.User;
 import com.unimobili.api.repositories.UserRepository;
@@ -68,23 +65,28 @@ public class VisitaService {
         );
     }
 
-    public List<VisitaResponseDTO> getUpcomingVisitas(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Visita> visitasPage = this.repository.findUpcomingVisitas(OffsetDateTime.now(), pageable);
-        return visitasPage.map(visita -> new VisitaResponseDTO(
-                visita.getId(),
-                visita.getCriado_em(),
-                visita.getData_hora(),
-                visita.getCriadoPor().getId(),
-                visita.getCriadoPor().getLogin(),
-                visita.getDesignadoA().getId(),
-                visita.getDesignadoA().getLogin(),
-                visita.getNome_cliente(),
-                visita.getTelefone_cliente(),
-                visita.getChaves(),
-                visita.getObservacoes(),
-                visita.getStatus(),
-                visita.getAtiva()
-        )).stream().toList();
+    public List<VisitaResponseDTO> getUpcomingVisitas() {
+        List<Visita> visitas = this.repository.findUpcomingVisitas(OffsetDateTime.now());
+
+        return visitas.stream()
+                .map(visita -> new VisitaResponseDTO(
+                        visita.getId(),
+                        visita.getCriado_em(),
+                        visita.getData_hora(),
+
+                        visita.getCriadoPor().getId(),
+                        visita.getCriadoPor().getLogin(),
+
+                        visita.getDesignadoA().getId(),
+                        visita.getDesignadoA().getLogin(),
+
+                        visita.getNome_cliente(),
+                        visita.getTelefone_cliente(),
+                        visita.getChaves(),
+                        visita.getObservacoes(),
+                        visita.getStatus(),
+                        visita.getAtiva()
+                ))
+                .toList();
     }
 }
