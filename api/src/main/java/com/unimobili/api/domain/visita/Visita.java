@@ -1,10 +1,8 @@
 package com.unimobili.api.domain.visita;
 
 import com.unimobili.api.domain.enums.StatusVisita;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.unimobili.api.domain.user.User;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,9 +26,13 @@ public class Visita {
 
     private OffsetDateTime data_hora;
 
-    private String criado_por;
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "criado_por_id")
+    private User criado_por;
 
-    private String designado_a;
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "designado_a_id")
+    private User designado_a;
 
     private String nome_cliente;
 
@@ -40,6 +42,7 @@ public class Visita {
 
     private String observacoes;
 
+    @Enumerated(EnumType.STRING)
     private StatusVisita status;
 
     private Boolean ativa;
