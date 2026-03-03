@@ -1,5 +1,6 @@
 package com.unimobili.api.domain.user;
 
+import com.unimobili.api.domain.enums.StatusVisita;
 import com.unimobili.api.domain.enums.UserRoles;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -26,6 +27,7 @@ public class User implements UserDetails {
     private UUID id;
     private String login;
     private String password;
+    @Enumerated(EnumType.STRING)
     private UserRoles role;
 
     public User(String login, String password, UserRoles role) {
