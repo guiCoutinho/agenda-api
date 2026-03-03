@@ -46,4 +46,7 @@ public class Visita {
     private StatusVisita status;
 
     private Boolean ativa;
+
+    private Integer duracao_minutos;
+    private OffsetDateTime data_hora_fim;
 }

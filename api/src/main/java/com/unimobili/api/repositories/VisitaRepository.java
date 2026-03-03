@@ -12,4 +12,20 @@ import java.util.UUID;
 public interface VisitaRepository extends JpaRepository<Visita, UUID> {
     @Query("SELECT v FROM Visita v WHERE v.data_hora >= :currentDate ORDER BY v.data_hora ASC")
     List<Visita> findUpcomingVisitas(@Param("currentDate") OffsetDateTime currentDate);
+
+    @Query(value = """
+    SELECT EXISTS (
+      SELECT 1
+      FROM visita v
+      WHERE v.ativa = true
+        AND v.designado_a_id = :visitadorId
+        AND tstzrange(v.data_hora, v.data_hora_fim, '[)') &&
+            tstzrange(:inicio, :fim, '[)')
+    )
+    """, nativeQuery = true)
+    boolean existsOverlappingVisit(
+            @Param("visitadorId") UUID visitadorId,
+            @Param("inicio") OffsetDateTime inicio,
+            @Param("fim") OffsetDateTime fim
+    );
 }
