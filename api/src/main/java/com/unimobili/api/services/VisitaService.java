@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.UUID;
 
 import static com.unimobili.api.domain.enums.StatusVisita.AGENDADA;
 
@@ -103,6 +104,35 @@ public class VisitaService {
 
     public List<VisitaResponseDTO> getUpcomingVisitas() {
         List<Visita> visitas = this.repository.findUpcomingVisitas(
+                OffsetDateTime.now(ZoneOffset.UTC)
+        );
+
+        return visitas.stream()
+                .map(visita -> new VisitaResponseDTO(
+                        visita.getId(),
+                        visita.getCriado_em(),
+                        visita.getData_hora(),
+
+                        visita.getCriadoPor().getId(),
+                        visita.getCriadoPor().getLogin(),
+
+                        visita.getDesignadoA().getId(),
+                        visita.getDesignadoA().getLogin(),
+
+                        visita.getNome_cliente(),
+                        visita.getTelefone_cliente(),
+                        visita.getChaves(),
+                        visita.getObservacoes(),
+                        visita.getStatus(),
+                        visita.getAtiva(),
+                        visita.getDuracao_minutos()
+                ))
+                .toList();
+    }
+
+    public List<VisitaResponseDTO> getUpcomingVisitasByVisitador(UUID visitadorId) {
+        List<Visita> visitas = repository.findUpcomingVisitasByVisitador(
+                visitadorId,
                 OffsetDateTime.now(ZoneOffset.UTC)
         );
 

@@ -28,4 +28,17 @@ public interface VisitaRepository extends JpaRepository<Visita, UUID> {
             @Param("inicio") OffsetDateTime inicio,
             @Param("fim") OffsetDateTime fim
     );
+
+    @Query("""
+    SELECT v
+    FROM Visita v
+    WHERE v.data_hora >= :currentDate
+      AND v.designadoA.id = :visitadorId
+      AND v.ativa = true
+    ORDER BY v.data_hora ASC
+""")
+    List<Visita> findUpcomingVisitasByVisitador(
+            @Param("visitadorId") UUID visitadorId,
+            @Param("currentDate") OffsetDateTime currentDate
+    );
 }

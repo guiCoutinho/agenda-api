@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/visita")
@@ -26,6 +27,14 @@ public class VisitaController {
     public ResponseEntity<List<VisitaResponseDTO>> getVisitas() {
         List<VisitaResponseDTO> allVisitas = this.visitaService.getUpcomingVisitas();
         return ResponseEntity.ok(allVisitas);
+    }
+
+    @GetMapping("/upcoming/visitador/{visitadorId}")
+    public ResponseEntity<List<VisitaResponseDTO>> getUpcomingVisitasByVisitador(
+            @PathVariable UUID visitadorId
+    ) {
+        List<VisitaResponseDTO> visitas = visitaService.getUpcomingVisitasByVisitador(visitadorId);
+        return ResponseEntity.ok(visitas);
     }
 
 }
