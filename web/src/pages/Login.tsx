@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginRequest } from "../services/auth";
+import { getMe } from "../services/users";
 
 export default function Login() {
   const [login, setLogin] = useState("");
@@ -17,7 +18,14 @@ export default function Login() {
     try {
       const { token } = await loginRequest({ login, password });
       localStorage.setItem("token", token);
-      navigate("/"); // vai pra home após logar
+      const me = await getMe();
+      localStorage.setItem("me", JSON.stringify(me));
+
+      if (me.role === "VISITADOR") {
+        navigate("/visitador");
+      } else {
+        navigate("/agenda");
+      }
     } catch {
       setError("Login ou senha inválidos.");
     } finally {

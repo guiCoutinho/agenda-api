@@ -1,23 +1,28 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import NovaVisita from "./pages/NovaVisita.tsx";
+
 import Login from "./pages/Login";
-import RequireAuth from "./components/RequireAuth";
+import VisitadorUpcoming from "./pages/VisitadorUpcoming";
+import Agenda from "./pages/Agenda";
 
-function Home() {
+import RequireRole from "./components/RequireRole";
+
+type UserRole = "ADMIN" | "ATENDENTE" | "VISITADOR";
+
+function IndexRedirect() {
+  const token = localStorage.getItem("token");
+  const meRaw = localStorage.getItem("me");
+
+  if (!token || !meRaw) return <Navigate to="/login" replace />;
+
+  const me = JSON.parse(meRaw) as { role: UserRole };
   return (
-    <div style={{ padding: 24 }}>
-      <h2>Home (protegida)</h2>
-
-      <button
-        onClick={() => {
-          localStorage.removeItem("token");
-          window.location.href = "/login";
-        }}
-      >
-        Sair
-      </button>
-    </div>
+    <Navigate
+      to={me.role === "VISITADOR" ? "/visitador" : "/agenda"}
+      replace
+    />
   );
 }
 
@@ -26,14 +31,39 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+
+        {/* rota raiz decide pra onde mandar baseado na role */}
+        <Route path="/" element={<IndexRedirect />} />
+
         <Route
-          path="/"
+          path="/visitador"
           element={
-            <RequireAuth>
-              <Home />
-            </RequireAuth>
+            <RequireRole allowed={["VISITADOR"]}>
+              <VisitadorUpcoming />
+            </RequireRole>
           }
         />
+
+        <Route
+          path="/agenda"
+          element={
+            <RequireRole allowed={["ADMIN", "ATENDENTE"]}>
+              <Agenda />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/visitas/nova"
+          element={
+            <RequireRole allowed={["ADMIN", "ATENDENTE"]}>
+              <NovaVisita />
+            </RequireRole>
+          }
+        />
+
+        {/* fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>
