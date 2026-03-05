@@ -35,7 +35,7 @@ public class VisitaService {
                 .getPrincipal();
 
         User designadoA = userRepository.findById(data.designado_a_id())
-                .orElseThrow(() -> new RuntimeException("Usuário designado não encontrado"));
+                .orElseThrow(() -> new java.util.NoSuchElementException("Usuario designado nao encontrado"));
 
         // 1) Parse em UTC (padrão do seu projeto)
         OffsetDateTime inicioUtc = OffsetDateTime

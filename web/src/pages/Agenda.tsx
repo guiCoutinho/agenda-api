@@ -1,6 +1,6 @@
-// web/src/pages/Agenda.tsx
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getApiErrorMessage } from "../services/api";
 import { getVisitadores, type Visitador } from "../services/visitadores";
 import { getUpcomingByVisitador, type Visita } from "../services/visitas";
 import type { UserRole } from "../services/users";
@@ -11,12 +11,30 @@ type Me = {
   role: UserRole;
 };
 
-function formatDateTime(iso: string) {
-  const d = new Date(iso);
+function dayKey(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function hourLabel(hour: number) {
+  return `${String(hour).padStart(2, "0")}:00`;
+}
+
+function formatWeekday(d: Date) {
   return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
   }).format(d);
+}
+
+function formatTime(iso: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
 }
 
 export default function Agenda() {
@@ -35,15 +53,37 @@ export default function Agenda() {
   const [loadingVisitas, setLoadingVisitas] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const weekDays = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d;
+    });
+  }, []);
+
+  const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
+
+  const startRange = weekDays[0];
+  const endRange = useMemo(() => {
+    const d = new Date(weekDays[0]);
+    d.setDate(d.getDate() + 7);
+    return d;
+  }, [weekDays]);
+
   async function loadVisitadores() {
     setLoadingVisitadores(true);
     setError(null);
     try {
       const data = await getVisitadores();
       setVisitadores(data);
-      if (data.length > 0) setSelectedId((prev) => prev || data[0].id);
-    } catch {
-      setError("Não foi possível carregar a lista de visitadores.");
+      if (data.length > 0) {
+        setSelectedId((prev) => (prev && data.some((v) => v.id === prev) ? prev : data[0].id));
+      }
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Nao foi possivel carregar a lista de visitadores."));
     } finally {
       setLoadingVisitadores(false);
     }
@@ -55,8 +95,8 @@ export default function Agenda() {
     try {
       const data = await getUpcomingByVisitador(visitadorId);
       setVisitas(data);
-    } catch {
-      setError("Não foi possível carregar as visitas do visitador.");
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Nao foi possivel carregar as visitas do visitador."));
     } finally {
       setLoadingVisitas(false);
     }
@@ -74,6 +114,32 @@ export default function Agenda() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
+  const visitasSemana = useMemo(() => {
+    return visitas
+      .filter((v) => {
+        const d = new Date(v.data_hora);
+        return d >= startRange && d < endRange;
+      })
+      .sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
+  }, [visitas, startRange, endRange]);
+
+  const visitasPorSlot = useMemo(() => {
+    const map = new Map<string, Visita[]>();
+
+    for (const visita of visitasSemana) {
+      const d = new Date(visita.data_hora);
+      const key = `${dayKey(d)}-${d.getHours()}`;
+      const list = map.get(key);
+      if (list) {
+        list.push(visita);
+      } else {
+        map.set(key, [visita]);
+      }
+    }
+
+    return map;
+  }, [visitasSemana]);
+
   function logout() {
     localStorage.removeItem("token");
     localStorage.removeItem("me");
@@ -84,126 +150,126 @@ export default function Agenda() {
 
   if (!me) {
     return (
-      <div style={{ padding: 24 }}>
-        <p>Você não está autenticado.</p>
-        <a href="/login">Ir para login</a>
+      <div className="page-bg">
+        <div className="page-shell card" style={{ padding: 24 }}>
+          <p>Voce nao esta autenticado.</p>
+          <a href="/login">Ir para login</a>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 12,
-          alignItems: "center",
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0 }}>Agenda</h2>
-          <small>
-            Logado como <b>{me.login}</b> ({me.role})
-          </small>
-        </div>
-
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            onClick={() => navigate(`/visitas/nova?visitadorId=${selectedId}`)}
-            disabled={!selectedId}
+    <div className="page-bg">
+      <div className="page-shell" style={{ display: "grid", gap: 14 }}>
+        <section className="card" style={{ padding: 18 }}>
+          <header
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
           >
-            Criar visita
-          </button>
+            <div>
+              <h2 style={{ margin: 0 }}>Agenda Semanal</h2>
+              <p className="muted" style={{ margin: "4px 0 0" }}>
+                Logado como <strong>{me.login}</strong> ({me.role})
+              </p>
+            </div>
 
-          <button onClick={loadVisitadores} disabled={loadingVisitadores}>
-            {loadingVisitadores ? "Atualizando..." : "Atualizar visitadores"}
-          </button>
+            <div className="toolbar">
+              <button
+                className="btn btn-primary"
+                onClick={() => navigate(`/visitas/nova?visitadorId=${selectedId}`)}
+                disabled={!selectedId}
+              >
+                Criar visita
+              </button>
+              <button className="btn btn-ghost" onClick={loadVisitadores} disabled={loadingVisitadores}>
+                {loadingVisitadores ? "Atualizando..." : "Atualizar visitadores"}
+              </button>
+              <button className="btn btn-danger" onClick={logout}>
+                Sair
+              </button>
+            </div>
+          </header>
 
-          <button onClick={logout}>Sair</button>
-        </div>
-      </header>
+          <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+            <label>
+              Visitador
+              <select
+                className="select"
+                value={selectedId}
+                onChange={(e) => setSelectedId(e.target.value)}
+                disabled={loadingVisitadores || visitadores.length === 0}
+                style={{ maxWidth: 360 }}
+              >
+                {visitadores.length === 0 && <option value="">Nenhum visitador</option>}
+                {visitadores.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.login}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-      <section style={{ marginTop: 16 }}>
-        <label style={{ display: "block", marginBottom: 8 }}>
-          Selecionar visitador
-        </label>
+            {!error && selected && (
+              <p className="muted" style={{ margin: 0 }}>
+                Janela exibida: 7 dias a partir de hoje para <strong>{selected.login}</strong>
+              </p>
+            )}
 
-        <select
-          value={selectedId}
-          onChange={(e) => setSelectedId(e.target.value)}
-          disabled={loadingVisitadores || visitadores.length === 0}
-          style={{ padding: 10, minWidth: 320 }}
-        >
-          {visitadores.length === 0 && <option value="">Nenhum visitador</option>}
-          {visitadores.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.login}
-            </option>
-          ))}
-        </select>
+            {error && <p className="error" style={{ margin: 0 }}>{error}</p>}
+            {loadingVisitas && <p className="muted" style={{ margin: 0 }}>Carregando visitas...</p>}
+          </div>
+        </section>
 
-        <div style={{ marginTop: 16 }}>
-          {error && <p style={{ color: "crimson" }}>{error}</p>}
-          {loadingVisitas && <p>Carregando visitas...</p>}
+        <section className="card" style={{ padding: 14 }}>
+          <div className="calendar-wrap">
+            <div className="calendar-grid">
+              <div className="calendar-head">Hora</div>
+              {weekDays.map((day) => (
+                <div className="calendar-head" key={day.toISOString()}>
+                  {formatWeekday(day)}
+                </div>
+              ))}
 
-          {!loadingVisitas && !error && selected && (
-            <p style={{ marginTop: 0 }}>
-              Mostrando visitas futuras de: <b>{selected.login}</b>
+              {hours.map((hour) => (
+                <Fragment key={`row-${hour}`}>
+                  <div className="calendar-time">{hourLabel(hour)}</div>
+                  {weekDays.map((day) => {
+                    const key = `${dayKey(day)}-${hour}`;
+                    const slotVisitas = visitasPorSlot.get(key) ?? [];
+                    return (
+                      <div key={`${key}-cell`} className="calendar-cell">
+                        {slotVisitas.map((v) => (
+                          <article className="event-card" key={v.id}>
+                            <p className="event-title">{formatTime(v.data_hora)} - {v.nome_cliente}</p>
+                            <p className="event-sub">Tel: {v.telefone_cliente}</p>
+                            <p className="event-sub">Chaves: {v.chaves}</p>
+                            <p className="event-sub">
+                              {v.status ? <span className="badge">{v.status}</span> : null}
+                              {v.duracao_minutos ? ` ${v.duracao_minutos}min` : ""}
+                            </p>
+                          </article>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </Fragment>
+              ))}
+            </div>
+          </div>
+
+          {!loadingVisitas && !error && selected && visitasSemana.length === 0 && (
+            <p className="muted" style={{ margin: "12px 0 0" }}>
+              Nenhuma visita deste visitador nesta janela de 7 dias.
             </p>
           )}
-
-          {!loadingVisitas && !error && visitas.length === 0 && selected && (
-            <p>Este visitador não tem visitas futuras.</p>
-          )}
-
-          {!loadingVisitas && !error && visitas.length > 0 && (
-            <div style={{ overflowX: "auto", marginTop: 12 }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    <th style={th}>Data/Hora</th>
-                    <th style={th}>Cliente</th>
-                    <th style={th}>Telefone</th>
-                    <th style={th}>Chaves</th>
-                    <th style={th}>Status</th>
-                    <th style={th}>Duração</th>
-                    <th style={th}>Obs.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visitas.map((v) => (
-                    <tr key={v.id}>
-                      <td style={td}>{formatDateTime(v.data_hora)}</td>
-                      <td style={td}>{v.nome_cliente}</td>
-                      <td style={td}>{v.telefone_cliente}</td>
-                      <td style={td}>{v.chaves}</td>
-                      <td style={td}>{v.status}</td>
-                      <td style={td}>
-                        {v.duracao_minutos ? `${v.duracao_minutos} min` : "-"}
-                      </td>
-                      <td style={td}>{v.observacoes ?? "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }
-
-const th: React.CSSProperties = {
-  textAlign: "left",
-  padding: "10px 8px",
-  borderBottom: "1px solid #ddd",
-  whiteSpace: "nowrap",
-};
-
-const td: React.CSSProperties = {
-  padding: "10px 8px",
-  borderBottom: "1px solid #eee",
-  verticalAlign: "top",
-};

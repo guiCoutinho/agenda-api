@@ -1,6 +1,6 @@
-// web/src/pages/NovaVisita.tsx
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { getApiErrorMessage } from "../services/api";
 import { createVisita } from "../services/visitas";
 import type { UserRole } from "../services/users";
 
@@ -11,13 +11,11 @@ type Me = {
 };
 
 function toBackendOffsetDateTime(date: string, time: string) {
-  // date: "YYYY-MM-DD"
-  // time: "HH:mm"
-  // Retorna: "YYYY-MM-DDTHH:mm:00-03:00" (offset do navegador)
-  const [hh, mm] = time.split(":").map(Number);
+  const [yyyy, mm, dd] = date.split("-").map(Number);
+  const [hh, min] = time.split(":").map(Number);
 
-  const d = new Date(date);
-  d.setHours(hh, mm, 0, 0);
+  // Build local date from numeric parts to avoid timezone shifts from `new Date("YYYY-MM-DD")`.
+  const d = new Date(yyyy, mm - 1, dd, hh, min, 0, 0);
 
   const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -48,37 +46,38 @@ export default function NovaVisita() {
 
   const visitadorId = params.get("visitadorId") ?? "";
 
-  const [data, setData] = useState(""); // YYYY-MM-DD
-  const [hora, setHora] = useState(""); // HH:mm
+  const [data, setData] = useState("");
+  const [hora, setHora] = useState("");
 
   const [nomeCliente, setNomeCliente] = useState("");
   const [telefoneCliente, setTelefoneCliente] = useState("");
   const [chaves, setChaves] = useState("");
   const [observacoes, setObservacoes] = useState("");
-  const [status, setStatus] = useState("AGENDADA");
-  const [ativa, setAtiva] = useState(true);
   const [duracaoMinutos, setDuracaoMinutos] = useState<number | "">("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // UI guards (pra não deixar a tela quebrar)
   if (!me) {
     return (
-      <div style={{ padding: 24 }}>
-        <p>Você não está autenticado.</p>
-        <a href="/login">Ir para login</a>
+      <div className="page-bg">
+        <div className="page-shell card" style={{ padding: 24 }}>
+          <p>Voce nao esta autenticado.</p>
+          <a href="/login">Ir para login</a>
+        </div>
       </div>
     );
   }
 
   if (!visitadorId) {
     return (
-      <div style={{ padding: 24 }}>
-        <p style={{ color: "crimson" }}>
-          Nenhum visitador selecionado. Volte para a Agenda e selecione um visitador.
-        </p>
-        <button onClick={() => navigate("/agenda")}>Voltar</button>
+      <div className="page-bg">
+        <div className="page-shell card" style={{ padding: 24 }}>
+          <p className="error" style={{ marginTop: 0 }}>
+            Nenhum visitador selecionado. Volte para a Agenda e selecione um visitador.
+          </p>
+          <button className="btn btn-ghost" onClick={() => navigate("/agenda")}>Voltar</button>
+        </div>
       </div>
     );
   }
@@ -86,13 +85,6 @@ export default function NovaVisita() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-
-    // Guard EXTRA (resolve o erro do TS e deixa mais seguro)
-    const meSafe = me;
-    if (!meSafe) {
-      setError("Sessão inválida. Faça login novamente.");
-      return;
-    }
 
     if (!data || !hora) {
       setError("Preencha a data e a hora.");
@@ -116,152 +108,113 @@ export default function NovaVisita() {
         chaves: chaves.trim(),
         observacoes: observacoes.trim() ? observacoes.trim() : undefined,
         duracao_minutos: duracaoMinutos === "" ? undefined : duracaoMinutos,
-    });
+      });
 
       navigate("/agenda");
-    } catch {
-      setError("Não foi possível criar a visita. Verifique os campos e tente novamente.");
+    } catch (err) {
+      setError(
+        getApiErrorMessage(err, "Nao foi possivel criar a visita. Verifique os campos e tente novamente.")
+      );
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12,
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0 }}>Criar visita</h2>
-          <small>
-            Criado por: <b>{me.login}</b> | Visitador selecionado: <b>{visitadorId}</b>
-          </small>
-        </div>
+    <div className="page-bg">
+      <div className="page-shell" style={{ display: "grid", gap: 14 }}>
+        <section className="card" style={{ padding: 18 }}>
+          <header
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <h2 style={{ margin: 0 }}>Nova visita</h2>
+              <p className="muted" style={{ margin: "4px 0 0" }}>
+                Criador: <strong>{me.login}</strong> | Visitador ID: <strong>{visitadorId}</strong>
+              </p>
+            </div>
+            <button className="btn btn-ghost" onClick={() => navigate(-1)} disabled={loading}>Voltar</button>
+          </header>
+        </section>
 
-        <button onClick={() => navigate(-1)} disabled={loading}>
-          Voltar
-        </button>
-      </header>
+        <section className="card" style={{ padding: 18 }}>
+          <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
+            {error && <p className="error" style={{ margin: 0 }}>{error}</p>}
 
-      <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>
-        {error && <p style={{ color: "crimson" }}>{error}</p>}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+              <label>
+                Data
+                <input className="input" type="date" value={data} onChange={(e) => setData(e.target.value)} required />
+              </label>
 
-        <div style={grid}>
-          <div>
-            <label>Data</label>
-            <input
-              type="date"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-              style={input}
-              required
-            />
-          </div>
+              <label>
+                Hora
+                <input className="input" type="time" value={hora} onChange={(e) => setHora(e.target.value)} required />
+              </label>
 
-          <div>
-            <label>Hora (HH:mm)</label>
-            <input
-              type="time"
-              value={hora}
-              onChange={(e) => setHora(e.target.value)}
-              style={input}
-              required
-            />
-          </div>
+              <label>
+                Duracao (minutos)
+                <input
+                  className="input"
+                  type="number"
+                  min={0}
+                  value={duracaoMinutos}
+                  onChange={(e) => setDuracaoMinutos(e.target.value === "" ? "" : Number(e.target.value))}
+                  placeholder="Ex: 30"
+                />
+              </label>
+            </div>
 
-          <div>
-            <label>Duração (minutos)</label>
-            <input
-              type="number"
-              min={0}
-              value={duracaoMinutos}
-              onChange={(e) =>
-                setDuracaoMinutos(e.target.value === "" ? "" : Number(e.target.value))
-              }
-              style={input}
-              placeholder="Ex: 30"
-            />
-          </div>
+            <label>
+              Nome do cliente
+              <input className="input" value={nomeCliente} onChange={(e) => setNomeCliente(e.target.value)} required />
+            </label>
 
-          <div>
-            <label>Status</label>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} style={input}>
-              <option value="AGENDADA">AGENDADA</option>
-              <option value="REALIZADA">REALIZADA</option>
-              <option value="CANCELADA">CANCELADA</option>
-            </select>
-          </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+              <label>
+                Telefone do cliente
+                <input
+                  className="input"
+                  value={telefoneCliente}
+                  onChange={(e) => setTelefoneCliente(e.target.value)}
+                  required
+                />
+              </label>
 
-          <div style={{ gridColumn: "1 / -1" }}>
-            <label>Nome do cliente</label>
-            <input
-              value={nomeCliente}
-              onChange={(e) => setNomeCliente(e.target.value)}
-              style={input}
-              required
-            />
-          </div>
+              <label>
+                Chaves
+                <input className="input" value={chaves} onChange={(e) => setChaves(e.target.value)} required />
+              </label>
+            </div>
 
-          <div>
-            <label>Telefone do cliente</label>
-            <input
-              value={telefoneCliente}
-              onChange={(e) => setTelefoneCliente(e.target.value)}
-              style={input}
-              required
-            />
-          </div>
+            <label>
+              Observacoes
+              <textarea
+                className="textarea"
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                rows={4}
+              />
+            </label>
 
-          <div>
-            <label>Chaves</label>
-            <input value={chaves} onChange={(e) => setChaves(e.target.value)} style={input} required />
-          </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+              <p className="muted" style={{ margin: 0 }}>
+                data_hora enviado: {data && hora ? <code>{toBackendOffsetDateTime(data, hora)}</code> : <code>-</code>}
+              </p>
 
-          <div style={{ gridColumn: "1 / -1" }}>
-            <label>Observações</label>
-            <textarea
-              value={observacoes}
-              onChange={(e) => setObservacoes(e.target.value)}
-              style={{ ...input, minHeight: 90 }}
-            />
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <input type="checkbox" checked={ativa} onChange={(e) => setAtiva(e.target.checked)} />
-            <label style={{ margin: 0 }}>Ativa</label>
-          </div>
-        </div>
-
-        <button type="submit" disabled={loading} style={{ marginTop: 16, padding: 12 }}>
-          {loading ? "Criando..." : "Criar visita"}
-        </button>
-
-        <p style={{ marginTop: 10, fontSize: 13, color: "#555" }}>
-          Envio de <code>data_hora</code> para o backend:{" "}
-          {data && hora ? <code>{toBackendOffsetDateTime(data, hora)}</code> : <code>—</code>}
-        </p>
-      </form>
+              <button className="btn btn-primary" type="submit" disabled={loading}>
+                {loading ? "Criando..." : "Criar visita"}
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
     </div>
   );
 }
-
-const grid: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: 12,
-  marginTop: 12,
-};
-
-const input: React.CSSProperties = {
-  width: "100%",
-  padding: 10,
-  marginTop: 6,
-  borderRadius: 8,
-  border: "1px solid #ddd",
-  boxSizing: "border-box",
-};

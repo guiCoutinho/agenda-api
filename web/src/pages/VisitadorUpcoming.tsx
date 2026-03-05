@@ -9,12 +9,10 @@ type Me = {
 };
 
 function formatDateTime(iso: string) {
-  // Mostra em pt-BR com fuso local do navegador
-  const d = new Date(iso);
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
-  }).format(d);
+  }).format(new Date(iso));
 }
 
 export default function VisitadorUpcoming() {
@@ -35,7 +33,7 @@ export default function VisitadorUpcoming() {
       const data = await getUpcomingByVisitador(me.id);
       setVisitas(data);
     } catch {
-      setError("Não foi possível carregar suas visitas futuras.");
+      setError("Nao foi possivel carregar suas visitas futuras.");
     } finally {
       setLoading(false);
     }
@@ -55,83 +53,80 @@ export default function VisitadorUpcoming() {
 
   if (!me) {
     return (
-      <div style={{ padding: 24 }}>
-        <p>Você não está autenticado.</p>
-        <a href="/login">Ir para login</a>
+      <div className="page-bg">
+        <div className="page-shell card" style={{ padding: 24 }}>
+          <p>Voce nao esta autenticado.</p>
+          <a href="/login">Ir para login</a>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
-      <header style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-        <div>
-          <h2 style={{ margin: 0 }}>Minhas visitas futuras</h2>
-          <small>
-            Logado como <b>{me.login}</b> ({me.role})
-          </small>
-        </div>
-
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={load} disabled={loading}>
-            {loading ? "Atualizando..." : "Atualizar"}
-          </button>
-          <button onClick={logout}>Sair</button>
-        </div>
-      </header>
-
-      <div style={{ marginTop: 16 }}>
-        {error && <p style={{ color: "crimson" }}>{error}</p>}
-        {loading && <p>Carregando...</p>}
-
-        {!loading && !error && visitas.length === 0 && (
-          <p>Você não tem visitas futuras.</p>
-        )}
-
-        {!loading && !error && visitas.length > 0 && (
-          <div style={{ overflowX: "auto", marginTop: 12 }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th style={th}>Data/Hora</th>
-                  <th style={th}>Cliente</th>
-                  <th style={th}>Telefone</th>
-                  <th style={th}>Chaves</th>
-                  <th style={th}>Status</th>
-                  <th style={th}>Duração</th>
-                  <th style={th}>Obs.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visitas.map((v) => (
-                  <tr key={v.id}>
-                    <td style={td}>{formatDateTime(v.data_hora)}</td>
-                    <td style={td}>{v.nome_cliente}</td>
-                    <td style={td}>{v.telefone_cliente}</td>
-                    <td style={td}>{v.chaves}</td>
-                    <td style={td}>{v.status}</td>
-                    <td style={td}>{v.duracao_minutos ? `${v.duracao_minutos} min` : "-"}</td>
-                    <td style={td}>{v.observacoes ?? "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+    <div className="page-bg">
+      <div className="page-shell card" style={{ padding: 18 }}>
+        <header
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 12,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <h2 style={{ margin: 0 }}>Minhas proximas visitas</h2>
+            <p className="muted" style={{ margin: "4px 0 0" }}>
+              Logado como <strong>{me.login}</strong> ({me.role})
+            </p>
           </div>
-        )}
+
+          <div className="toolbar">
+            <button className="btn btn-ghost" onClick={load} disabled={loading}>
+              {loading ? "Atualizando..." : "Atualizar"}
+            </button>
+            <button className="btn btn-danger" onClick={logout}>Sair</button>
+          </div>
+        </header>
+
+        <div style={{ marginTop: 14 }}>
+          {error && <p className="error">{error}</p>}
+          {loading && <p className="muted">Carregando...</p>}
+
+          {!loading && !error && visitas.length === 0 && <p className="muted">Voce nao tem visitas futuras.</p>}
+
+          {!loading && !error && visitas.length > 0 && (
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Data/Hora</th>
+                    <th>Cliente</th>
+                    <th>Telefone</th>
+                    <th>Chaves</th>
+                    <th>Status</th>
+                    <th>Duracao</th>
+                    <th>Obs.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visitas.map((v) => (
+                    <tr key={v.id}>
+                      <td>{formatDateTime(v.data_hora)}</td>
+                      <td>{v.nome_cliente}</td>
+                      <td>{v.telefone_cliente}</td>
+                      <td>{v.chaves}</td>
+                      <td>{v.status ? <span className="badge">{v.status}</span> : "-"}</td>
+                      <td>{v.duracao_minutos ? `${v.duracao_minutos} min` : "-"}</td>
+                      <td>{v.observacoes ?? "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
-
-const th: React.CSSProperties = {
-  textAlign: "left",
-  padding: "10px 8px",
-  borderBottom: "1px solid #ddd",
-  whiteSpace: "nowrap",
-};
-
-const td: React.CSSProperties = {
-  padding: "10px 8px",
-  borderBottom: "1px solid #eee",
-  verticalAlign: "top",
-};

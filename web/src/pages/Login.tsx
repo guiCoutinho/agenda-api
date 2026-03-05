@@ -27,56 +27,59 @@ export default function Login() {
         navigate("/agenda");
       }
     } catch {
-      setError("Login ou senha inválidos.");
+      setError("Login ou senha invalidos.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          width: 360,
-          padding: 24,
-          border: "1px solid #ddd",
-          borderRadius: 12,
-        }}
-      >
-        <h1 style={{ marginBottom: 16 }}>Entrar</h1>
+    <div className="page-bg" style={{ display: "grid", placeItems: "center" }}>
+      <div className="page-shell" style={{ maxWidth: 980, display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 16 }}>
+        <section className="card" style={{ padding: 26, background: "linear-gradient(160deg, #0f7b6c 0%, #105f95 100%)", color: "#f8fdff" }}>
+          <p style={{ margin: 0, fontWeight: 700, letterSpacing: "0.04em" }}>UNIMOBILI</p>
+          <h1 style={{ margin: "8px 0 10px", fontSize: "2rem", lineHeight: 1.1 }}>Gestao de visitas em tempo real</h1>
+          <p style={{ margin: 0, opacity: 0.95 }}>
+            Agenda semanal, distribuicao por visitador e acompanhamento das proximas visitas em um unico fluxo.
+          </p>
+        </section>
 
-        <label style={{ display: "block", marginBottom: 10 }}>
-          Login
-          <input
-            value={login}
-            onChange={(e) => setLogin(e.target.value)}
-            style={{ width: "100%", padding: 10, marginTop: 6 }}
-            autoComplete="username"
-          />
-        </label>
+        <section className="card" style={{ padding: 24 }}>
+          <h2 style={{ marginTop: 0, marginBottom: 6 }}>Entrar</h2>
+          <p className="muted" style={{ marginTop: 0 }}>Use suas credenciais para acessar o painel.</p>
 
-        <label style={{ display: "block", marginBottom: 10 }}>
-          Senha
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{ width: "100%", padding: 10, marginTop: 6 }}
-            autoComplete="current-password"
-          />
-        </label>
+          <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
+            <label>
+              Login
+              <input
+                className="input"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
+                autoComplete="username"
+                required
+              />
+            </label>
 
-        {error && <p style={{ color: "crimson" }}>{error}</p>}
+            <label>
+              Senha
+              <input
+                className="input"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </label>
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{ width: "100%", padding: 10, marginTop: 10 }}
-        >
-          {loading ? "Entrando..." : "Entrar"}
-        </button>
-      </form>
+            {error && <p className="error" style={{ margin: 0 }}>{error}</p>}
+
+            <button className="btn btn-primary" type="submit" disabled={loading}>
+              {loading ? "Entrando..." : "Entrar"}
+            </button>
+          </form>
+        </section>
+      </div>
     </div>
   );
 }

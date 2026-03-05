@@ -1,13 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import NovaVisita from "./pages/NovaVisita.tsx";
-
-import Login from "./pages/Login";
-import VisitadorUpcoming from "./pages/VisitadorUpcoming";
-import Agenda from "./pages/Agenda";
-
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import "./index.css";
 import RequireRole from "./components/RequireRole";
+import Agenda from "./pages/Agenda";
+import Login from "./pages/Login";
+import NovaVisita from "./pages/NovaVisita";
+import VisitadorUpcoming from "./pages/VisitadorUpcoming";
 
 type UserRole = "ADMIN" | "ATENDENTE" | "VISITADOR";
 
@@ -18,12 +17,7 @@ function IndexRedirect() {
   if (!token || !meRaw) return <Navigate to="/login" replace />;
 
   const me = JSON.parse(meRaw) as { role: UserRole };
-  return (
-    <Navigate
-      to={me.role === "VISITADOR" ? "/visitador" : "/agenda"}
-      replace
-    />
-  );
+  return <Navigate to={me.role === "VISITADOR" ? "/visitador" : "/agenda"} replace />;
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -31,8 +25,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-
-        {/* rota raiz decide pra onde mandar baseado na role */}
         <Route path="/" element={<IndexRedirect />} />
 
         <Route
@@ -62,7 +54,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           }
         />
 
-        {/* fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
