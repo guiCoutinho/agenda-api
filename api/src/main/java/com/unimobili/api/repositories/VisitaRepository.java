@@ -10,7 +10,13 @@ import java.util.List;
 import java.util.UUID;
 
 public interface VisitaRepository extends JpaRepository<Visita, UUID> {
-    @Query("SELECT v FROM Visita v WHERE v.data_hora >= :currentDate ORDER BY v.data_hora ASC")
+    @Query("""
+    SELECT v
+    FROM Visita v
+    WHERE v.data_hora >= :currentDate
+      AND v.ativa = true
+    ORDER BY v.data_hora ASC
+""")
     List<Visita> findUpcomingVisitas(@Param("currentDate") OffsetDateTime currentDate);
 
     @Query(value = """

@@ -29,6 +29,12 @@ public class VisitaController {
         return ResponseEntity.ok(allVisitas);
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> cancelVisita(@PathVariable UUID id) {
+        visitaService.cancelVisita(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/upcoming/visitador/{visitadorId}")
     public ResponseEntity<List<VisitaResponseDTO>> getUpcomingVisitasByVisitador(
             @PathVariable UUID visitadorId

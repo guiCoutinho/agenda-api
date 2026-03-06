@@ -1,5 +1,6 @@
 package com.unimobili.api.services;
 
+import com.unimobili.api.domain.enums.UserRoles;
 import com.unimobili.api.domain.user.User;
 import com.unimobili.api.domain.visita.Visita;
 import com.unimobili.api.domain.visita.VisitaRequestDTO;
@@ -7,6 +8,7 @@ import com.unimobili.api.domain.visita.VisitaResponseDTO;
 import com.unimobili.api.repositories.UserRepository;
 import com.unimobili.api.repositories.VisitaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +18,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static com.unimobili.api.domain.enums.StatusVisita.AGENDADA;
+import static com.unimobili.api.domain.enums.StatusVisita.CANCELADA;
 
 @Service
 public class VisitaService {
@@ -157,5 +160,32 @@ public class VisitaService {
                         visita.getDuracao_minutos()
                 ))
                 .toList();
+    }
+
+    public void cancelVisita(UUID visitaId) {
+        User usuarioLogado = (User) SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal();
+
+        Visita visita = repository.findById(visitaId)
+                .orElseThrow(() -> new java.util.NoSuchElementException("Visita nao encontrada"));
+
+        boolean isAdmin = usuarioLogado.getRole() == UserRoles.ADMIN;
+        boolean isCriador = visita.getCriadoPor().getId().equals(usuarioLogado.getId());
+        boolean isDesignado = visita.getDesignadoA().getId().equals(usuarioLogado.getId());
+
+        if (!isAdmin && !isCriador && !isDesignado) {
+            throw new AccessDeniedException("Voce nao tem permissao para cancelar esta visita.");
+        }
+
+        if (Boolean.FALSE.equals(visita.getAtiva())) {
+            throw new IllegalArgumentException("Esta visita ja esta cancelada.");
+        }
+
+        visita.setAtiva(Boolean.FALSE);
+        visita.setStatus(CANCELADA);
+
+        repository.save(visita);
     }
 }
