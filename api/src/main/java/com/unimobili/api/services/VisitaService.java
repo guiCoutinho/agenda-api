@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import java.time.LocalDate;
+import java.time.ZoneId;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -106,9 +108,12 @@ public class VisitaService {
     }
 
     public List<VisitaResponseDTO> getUpcomingVisitas() {
-        List<Visita> visitas = this.repository.findUpcomingVisitas(
-                OffsetDateTime.now(ZoneOffset.UTC)
-        );
+        OffsetDateTime inicioDoDiaUtc = LocalDate.now(ZoneId.of("America/Sao_Paulo"))
+                .atStartOfDay(ZoneId.of("America/Sao_Paulo"))
+                .toOffsetDateTime()
+                .withOffsetSameInstant(ZoneOffset.UTC);
+
+        List<Visita> visitas = this.repository.findUpcomingVisitas(inicioDoDiaUtc);
 
         return visitas.stream()
                 .map(visita -> new VisitaResponseDTO(
@@ -134,9 +139,14 @@ public class VisitaService {
     }
 
     public List<VisitaResponseDTO> getUpcomingVisitasByVisitador(UUID visitadorId) {
+        OffsetDateTime inicioDoDiaUtc = LocalDate.now(ZoneId.of("America/Sao_Paulo"))
+                .atStartOfDay(ZoneId.of("America/Sao_Paulo"))
+                .toOffsetDateTime()
+                .withOffsetSameInstant(ZoneOffset.UTC);
+
         List<Visita> visitas = repository.findUpcomingVisitasByVisitador(
                 visitadorId,
-                OffsetDateTime.now(ZoneOffset.UTC)
+                inicioDoDiaUtc
         );
 
         return visitas.stream()
