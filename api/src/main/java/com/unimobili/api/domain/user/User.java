@@ -3,10 +3,7 @@ package com.unimobili.api.domain.user;
 import com.unimobili.api.domain.enums.StatusVisita;
 import com.unimobili.api.domain.enums.UserRoles;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,6 +15,7 @@ import java.util.UUID;
 @Table(name = "users")
 @Entity(name = "users")
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(of = "id")
@@ -29,11 +27,13 @@ public class User implements UserDetails {
     private String password;
     @Enumerated(EnumType.STRING)
     private UserRoles role;
+    private Boolean mustChangePassword;
 
-    public User(String login, String password, UserRoles role) {
+    public User(String login, String password, UserRoles role, Boolean mustChangePassword) {
         this.login = login;
         this.password = password;
         this.role = role;
+        this.mustChangePassword = mustChangePassword;
     }
 
     @Override
