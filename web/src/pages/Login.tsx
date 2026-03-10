@@ -59,17 +59,17 @@ export default function Login() {
             </div>
 
             <h1 className="max-w-md text-4xl font-semibold leading-tight">
-              Agenda de visitas com aparência mais profissional e fluxo mais claro.
+              Unimobili.
             </h1>
 
             <p className="mt-4 max-w-md text-sm text-white/85">
-              Centralize os agendamentos, acompanhe visitadores e mantenha a operação organizada em um só lugar.
+              Centralize os agendamentos, acompanhe visitas e mantenha a operação organizada em um só lugar.
             </p>
           </div>
 
           <div className="rounded-3xl border border-white/15 bg-white/10 p-6 backdrop-blur">
             <p className="text-sm text-white/85">
-              Acesso restrito para administradores, atendentes e visitadores.
+              Acesso restrito para funcionários.
             </p>
           </div>
         </div>
