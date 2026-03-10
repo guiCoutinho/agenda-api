@@ -253,6 +253,12 @@ export default function Agenda() {
               Criar visita
             </Button>
 
+            {me.role === "ADMIN" ? (
+              <Button variant="outline" onClick={() => navigate("/usuarios/novo")}>
+                Novo usuário
+              </Button>
+            ) : null}
+
             <Button
               variant="outline"
               onClick={loadVisitadores}

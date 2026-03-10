@@ -7,6 +7,8 @@ import Agenda from "./pages/Agenda";
 import Login from "./pages/Login";
 import NovaVisita from "./pages/NovaVisita";
 import VisitadorUpcoming from "./pages/VisitadorUpcoming";
+import NovoUsuario from "./pages/NovoUsuario";
+import TrocarSenha from "./pages/TrocarSenha";
 
 type UserRole = "ADMIN" | "ATENDENTE" | "VISITADOR";
 
@@ -16,8 +18,13 @@ function IndexRedirect() {
 
   if (!token || !meRaw) return <Navigate to="/login" replace />;
 
-  const me = JSON.parse(meRaw) as { role: UserRole };
-  return <Navigate to={me.role === "VISITADOR" ? "/visitador" : "/agenda"} replace />;
+  const me = JSON.parse(meRaw) as { role: UserRole; mustChangePassword?: boolean };
+
+  if (me.mustChangePassword) {
+    return <Navigate to="/trocar-senha" replace />;
+  }
+
+return <Navigate to={me.role === "VISITADOR" ? "/visitador" : "/agenda"} replace />;
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -52,6 +59,20 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               <NovaVisita />
             </RequireRole>
           }
+        />
+
+        <Route
+          path="/usuarios/novo"
+          element={
+            <RequireRole allowed={["ADMIN"]}>
+              <NovoUsuario />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/trocar-senha"
+            element={<TrocarSenha />}
         />
 
         <Route path="*" element={<Navigate to="/" replace />} />

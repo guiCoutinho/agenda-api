@@ -34,7 +34,9 @@ export default function Login() {
       const me = await getMe();
       localStorage.setItem("me", JSON.stringify(me));
 
-      if (me.role === "VISITADOR") {
+      if (me.mustChangePassword) {
+        navigate("/trocar-senha");
+      } else if (me.role === "VISITADOR") {
         navigate("/visitador");
       } else {
         navigate("/agenda");
