@@ -1,8 +1,20 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { getApiErrorMessage } from "../services/api";
-import { createVisita } from "../services/visitas";
-import type { UserRole } from "../services/users";
+import { ArrowLeft, CalendarPlus, Save, UserRound } from "lucide-react";
+
+import { AppShell } from "@/components/layout/app-shell";
+import { PageHeader } from "@/components/layout/page-header";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
+import { getApiErrorMessage } from "@/services/api";
+import { createVisita } from "@/services/visitas";
+import { getVisitadores } from "@/services/visitadores";
+import type { UserRole } from "@/services/users";
 
 type Me = {
   id: string;
@@ -14,7 +26,6 @@ function toBackendOffsetDateTime(date: string, time: string) {
   const [yyyy, mm, dd] = date.split("-").map(Number);
   const [hh, min] = time.split(":").map(Number);
 
-  // Build local date from numeric parts to avoid timezone shifts from `new Date("YYYY-MM-DD")`.
   const d = new Date(yyyy, mm - 1, dd, hh, min, 0, 0);
 
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -46,9 +57,11 @@ export default function NovaVisita() {
 
   const visitadorId = params.get("visitadorId") ?? "";
 
+  const [visitadorNome, setVisitadorNome] = useState<string>("Carregando...");
+  const [loadingVisitador, setLoadingVisitador] = useState(false);
+
   const [data, setData] = useState("");
   const [hora, setHora] = useState("");
-
   const [nomeCliente, setNomeCliente] = useState("");
   const [telefoneCliente, setTelefoneCliente] = useState("");
   const [chaves, setChaves] = useState("");
@@ -58,12 +71,38 @@ export default function NovaVisita() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const backendDateTime = useMemo(() => {
+    if (!data || !hora) return "";
+    return toBackendOffsetDateTime(data, hora);
+  }, [data, hora]);
+
+  useEffect(() => {
+    async function loadVisitadorName() {
+      if (!visitadorId) return;
+
+      setLoadingVisitador(true);
+      try {
+        const visitadores = await getVisitadores();
+        const found = visitadores.find((v) => v.id === visitadorId);
+        setVisitadorNome(found?.login ?? "Visitador selecionado");
+      } catch {
+        setVisitadorNome("Visitador selecionado");
+      } finally {
+        setLoadingVisitador(false);
+      }
+    }
+
+    loadVisitadorName();
+  }, [visitadorId]);
+
   if (!me) {
     return (
-      <div className="page-bg">
-        <div className="page-shell card" style={{ padding: 24 }}>
-          <p>Voce nao esta autenticado.</p>
-          <a href="/login">Ir para login</a>
+      <div className="min-h-screen px-4 py-6">
+        <div className="mx-auto max-w-3xl rounded-3xl border bg-white p-8 shadow-sm">
+          <p className="text-slate-700">Voce nao esta autenticado.</p>
+          <a href="/login" className="mt-3 inline-block text-sm text-sky-700 underline">
+            Ir para login
+          </a>
         </div>
       </div>
     );
@@ -71,12 +110,14 @@ export default function NovaVisita() {
 
   if (!visitadorId) {
     return (
-      <div className="page-bg">
-        <div className="page-shell card" style={{ padding: 24 }}>
-          <p className="error" style={{ marginTop: 0 }}>
+      <div className="min-h-screen px-4 py-6">
+        <div className="mx-auto max-w-3xl rounded-3xl border bg-white p-8 shadow-sm">
+          <p className="text-sm text-rose-700">
             Nenhum visitador selecionado. Volte para a Agenda e selecione um visitador.
           </p>
-          <button className="btn btn-ghost" onClick={() => navigate("/agenda")}>Voltar</button>
+          <Button variant="outline" className="mt-4" onClick={() => navigate("/agenda")}>
+            Voltar
+          </Button>
         </div>
       </div>
     );
@@ -96,12 +137,15 @@ export default function NovaVisita() {
       return;
     }
 
-    const data_hora = toBackendOffsetDateTime(data, hora);
+    if (duracaoMinutos !== "" && duracaoMinutos < 0) {
+      setError("A duracao nao pode ser negativa.");
+      return;
+    }
 
     setLoading(true);
     try {
       await createVisita({
-        data_hora,
+        data_hora: toBackendOffsetDateTime(data, hora),
         designado_a_id: visitadorId,
         nome_cliente: nomeCliente.trim(),
         telefone_cliente: telefoneCliente.trim(),
@@ -113,7 +157,10 @@ export default function NovaVisita() {
       navigate("/agenda");
     } catch (err) {
       setError(
-        getApiErrorMessage(err, "Nao foi possivel criar a visita. Verifique os campos e tente novamente.")
+        getApiErrorMessage(
+          err,
+          "Nao foi possivel criar a visita. Verifique os campos e tente novamente."
+        )
       );
     } finally {
       setLoading(false);
@@ -121,100 +168,174 @@ export default function NovaVisita() {
   }
 
   return (
-    <div className="page-bg">
-      <div className="page-shell" style={{ display: "grid", gap: 14 }}>
-        <section className="card" style={{ padding: 18 }}>
-          <header
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 12,
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <h2 style={{ margin: 0 }}>Nova visita</h2>
-              <p className="muted" style={{ margin: "4px 0 0" }}>
-                Criador: <strong>{me.login}</strong> | Visitador ID: <strong>{visitadorId}</strong>
-              </p>
-            </div>
-            <button className="btn btn-ghost" onClick={() => navigate(-1)} disabled={loading}>Voltar</button>
-          </header>
-        </section>
+    <AppShell>
+      <PageHeader
+        title="Nova visita"
+        description="Preencha os dados para criar um novo agendamento."
+        actions={
+          <Button variant="outline" onClick={() => navigate(-1)} disabled={loading}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
+        }
+      />
 
-        <section className="card" style={{ padding: 18 }}>
-          <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
-            {error && <p className="error" style={{ margin: 0 }}>{error}</p>}
+      <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-6">
+          <Card className="rounded-3xl">
+            <CardHeader>
+              <CardTitle>Dados do agendamento</CardTitle>
+            </CardHeader>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-              <label>
-                Data
-                <input className="input" type="date" value={data} onChange={(e) => setData(e.target.value)} required />
-              </label>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="data">Data</Label>
+                <Input
+                  id="data"
+                  type="date"
+                  value={data}
+                  onChange={(e) => setData(e.target.value)}
+                  required
+                />
+              </div>
 
-              <label>
-                Hora
-                <input className="input" type="time" value={hora} onChange={(e) => setHora(e.target.value)} required />
-              </label>
+              <div className="space-y-2">
+                <Label htmlFor="hora">Hora</Label>
+                <Input
+                  id="hora"
+                  type="time"
+                  value={hora}
+                  onChange={(e) => setHora(e.target.value)}
+                  required
+                />
+              </div>
 
-              <label>
-                Duracao (minutos)
-                <input
-                  className="input"
+              <div className="space-y-2">
+                <Label htmlFor="duracao">Duracao (minutos)</Label>
+                <Input
+                  id="duracao"
                   type="number"
                   min={0}
                   value={duracaoMinutos}
-                  onChange={(e) => setDuracaoMinutos(e.target.value === "" ? "" : Number(e.target.value))}
+                  onChange={(e) =>
+                    setDuracaoMinutos(e.target.value === "" ? "" : Number(e.target.value))
+                  }
                   placeholder="Ex: 30"
                 />
-              </label>
-            </div>
+              </div>
 
-            <label>
-              Nome do cliente
-              <input className="input" value={nomeCliente} onChange={(e) => setNomeCliente(e.target.value)} required />
-            </label>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-              <label>
-                Telefone do cliente
-                <input
-                  className="input"
-                  value={telefoneCliente}
-                  onChange={(e) => setTelefoneCliente(e.target.value)}
+              <div className="space-y-2">
+                <Label htmlFor="chaves">Chaves</Label>
+                <Input
+                  id="chaves"
+                  value={chaves}
+                  onChange={(e) => setChaves(e.target.value)}
                   required
                 />
-              </label>
+              </div>
+            </CardContent>
+          </Card>
 
-              <label>
-                Chaves
-                <input className="input" value={chaves} onChange={(e) => setChaves(e.target.value)} required />
-              </label>
-            </div>
+          <Card className="rounded-3xl">
+            <CardHeader>
+              <CardTitle>Dados do cliente</CardTitle>
+            </CardHeader>
 
-            <label>
-              Observacoes
-              <textarea
-                className="textarea"
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-                rows={4}
-              />
-            </label>
+            <CardContent className="grid gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nomeCliente">Nome do cliente</Label>
+                <Input
+                  id="nomeCliente"
+                  value={nomeCliente}
+                  onChange={(e) => setNomeCliente(e.target.value)}
+                  required
+                />
+              </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-              <p className="muted" style={{ margin: 0 }}>
-                data_hora enviado: {data && hora ? <code>{toBackendOffsetDateTime(data, hora)}</code> : <code>-</code>}
-              </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="telefoneCliente">Telefone do cliente</Label>
+                  <Input
+                    id="telefoneCliente"
+                    value={telefoneCliente}
+                    onChange={(e) => setTelefoneCliente(e.target.value)}
+                    required
+                  />
+                </div>
 
-              <button className="btn btn-primary" type="submit" disabled={loading}>
+                <div className="space-y-2">
+                  <Label htmlFor="visitador">Visitador</Label>
+                  <Input
+                    id="visitador"
+                    value={loadingVisitador ? "Carregando..." : visitadorNome}
+                    disabled
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="observacoes">Observacoes</Label>
+                <Textarea
+                  id="observacoes"
+                  rows={5}
+                  value={observacoes}
+                  onChange={(e) => setObservacoes(e.target.value)}
+                  placeholder="Informacoes adicionais da visita"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div>
+          <Card className="rounded-3xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarPlus className="h-4 w-4" />
+                Resumo
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
+                <p>
+                  <span className="font-medium text-slate-900">Criado por:</span>{" "}
+                  {me.login}
+                </p>
+
+                <p className="mt-2 flex items-center gap-2">
+                  <UserRound className="h-4 w-4 text-slate-500" />
+                  <span>
+                    <span className="font-medium text-slate-900">Visitador:</span>{" "}
+                    {loadingVisitador ? "Carregando..." : visitadorNome}
+                  </span>
+                </p>
+
+                <p className="mt-2">
+                  <span className="font-medium text-slate-900">Visitador ID:</span>{" "}
+                  {visitadorId}
+                </p>
+
+                <p className="mt-2">
+                  <span className="font-medium text-slate-900">Data e hora enviadas:</span>{" "}
+                  {backendDateTime ? <code>{backendDateTime}</code> : <code>-</code>}
+                </p>
+              </div>
+
+              {error ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {error}
+                </div>
+              ) : null}
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                <Save className="mr-2 h-4 w-4" />
                 {loading ? "Criando..." : "Criar visita"}
-              </button>
-            </div>
-          </form>
-        </section>
-      </div>
-    </div>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </form>
+    </AppShell>
   );
 }

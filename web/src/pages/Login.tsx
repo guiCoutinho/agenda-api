@@ -1,23 +1,36 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { loginRequest } from "../services/auth";
-import { getMe } from "../services/users";
+import { LogIn, ShieldCheck } from "lucide-react";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+import { loginRequest } from "@/services/auth";
+import { getMe } from "@/services/users";
 
 export default function Login() {
-  const [login, setLogin] = useState("");
+  const navigate = useNavigate();
+
+  const [loginValue, setLoginValue] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
+    setError("");
     setLoading(true);
 
     try {
-      const { token } = await loginRequest({ login, password });
-      localStorage.setItem("token", token);
+      const authResponse = await loginRequest({
+        login: loginValue,
+        password,
+      });
+
+      localStorage.setItem("token", authResponse.token);
+
       const me = await getMe();
       localStorage.setItem("me", JSON.stringify(me));
 
@@ -27,58 +40,88 @@ export default function Login() {
         navigate("/agenda");
       }
     } catch {
-      setError("Login ou senha invalidos.");
+      setError("Login ou senha inválidos.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="page-bg" style={{ display: "grid", placeItems: "center" }}>
-      <div className="page-shell" style={{ maxWidth: 980, display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 16 }}>
-        <section className="card" style={{ padding: 26, background: "linear-gradient(160deg, #0f7b6c 0%, #105f95 100%)", color: "#f8fdff" }}>
-          <p style={{ margin: 0, fontWeight: 700, letterSpacing: "0.04em" }}>UNIMOBILI</p>
-          <h1 style={{ margin: "8px 0 10px", fontSize: "2rem", lineHeight: 1.1 }}>Gestao de visitas em tempo real</h1>
-          <p style={{ margin: 0, opacity: 0.95 }}>
-            Agenda semanal, distribuicao por visitador e acompanhamento das proximas visitas em um unico fluxo.
-          </p>
-        </section>
+    <div className="min-h-screen bg-transparent px-4 py-6">
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-xl lg:grid-cols-2">
+        <div className="hidden bg-[linear-gradient(135deg,#0f766e,#1d4ed8)] p-10 text-white lg:flex lg:flex-col lg:justify-between">
+          <div>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium backdrop-blur">
+              <ShieldCheck className="h-4 w-4" />
+              Plataforma interna
+            </div>
 
-        <section className="card" style={{ padding: 24 }}>
-          <h2 style={{ marginTop: 0, marginBottom: 6 }}>Entrar</h2>
-          <p className="muted" style={{ marginTop: 0 }}>Use suas credenciais para acessar o painel.</p>
+            <h1 className="max-w-md text-4xl font-semibold leading-tight">
+              Agenda de visitas com aparência mais profissional e fluxo mais claro.
+            </h1>
 
-          <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
-            <label>
-              Login
-              <input
-                className="input"
-                value={login}
-                onChange={(e) => setLogin(e.target.value)}
-                autoComplete="username"
-                required
-              />
-            </label>
+            <p className="mt-4 max-w-md text-sm text-white/85">
+              Centralize os agendamentos, acompanhe visitadores e mantenha a operação organizada em um só lugar.
+            </p>
+          </div>
 
-            <label>
-              Senha
-              <input
-                className="input"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                required
-              />
-            </label>
+          <div className="rounded-3xl border border-white/15 bg-white/10 p-6 backdrop-blur">
+            <p className="text-sm text-white/85">
+              Acesso restrito para administradores, atendentes e visitadores.
+            </p>
+          </div>
+        </div>
 
-            {error && <p className="error" style={{ margin: 0 }}>{error}</p>}
+        <div className="flex items-center justify-center bg-slate-50 p-6 md:p-10">
+          <Card className="w-full max-w-md rounded-3xl border-slate-200 shadow-sm">
+            <CardHeader className="space-y-2">
+              <CardTitle className="text-2xl">Entrar</CardTitle>
+              <CardDescription>
+                Use suas credenciais para acessar o sistema.
+              </CardDescription>
+            </CardHeader>
 
-            <button className="btn btn-primary" type="submit" disabled={loading}>
-              {loading ? "Entrando..." : "Entrar"}
-            </button>
-          </form>
-        </section>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="login">Login</Label>
+                  <Input
+                    id="login"
+                    value={loginValue}
+                    onChange={(e) => setLoginValue(e.target.value)}
+                    placeholder="Seu login"
+                    autoComplete="username"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Sua senha"
+                    autoComplete="current-password"
+                    required
+                  />
+                </div>
+
+                {error ? (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {error}
+                  </div>
+                ) : null}
+
+                <Button type="submit" className="w-full rounded-xl" disabled={loading}>
+                  <LogIn className="mr-2 h-4 w-4" />
+                  {loading ? "Entrando..." : "Entrar"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

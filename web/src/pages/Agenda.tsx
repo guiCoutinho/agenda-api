@@ -1,9 +1,27 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getApiErrorMessage } from "../services/api";
-import { getVisitadores, type Visitador } from "../services/visitadores";
-import { getUpcomingByVisitador, type Visita } from "../services/visitas";
-import type { UserRole } from "../services/users";
+import {
+  CalendarDays,
+  Clock3,
+  LogOut,
+  Plus,
+  RefreshCw,
+  UserRound,
+} from "lucide-react";
+
+import { AppShell } from "@/components/layout/app-shell";
+import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/shared/empty-state";
+import { LoadingState } from "@/components/shared/loading-state";
+import { StatusBadge } from "@/components/shared/status-badge";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+import { getApiErrorMessage } from "@/services/api";
+import { getVisitadores, type Visitador } from "@/services/visitadores";
+import { getUpcomingByVisitador, type Visita } from "@/services/visitas";
+import type { UserRole } from "@/services/users";
 
 type Me = {
   id: string;
@@ -11,15 +29,18 @@ type Me = {
   role: UserRole;
 };
 
+const START_HOUR = 8;
+const END_HOUR = 20; // fim visual da grade
+const SLOT_MINUTES = 30;
+const SLOT_HEIGHT = 64; // px
+const TOTAL_SLOTS = ((END_HOUR - START_HOUR) * 60) / SLOT_MINUTES;
+const DAY_COLUMN_HEIGHT = TOTAL_SLOTS * SLOT_HEIGHT;
+
 function dayKey(d: Date) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
-}
-
-function hourLabel(hour: number) {
-  return `${String(hour).padStart(2, "0")}:00`;
 }
 
 function formatWeekday(d: Date) {
@@ -35,6 +56,19 @@ function formatTime(iso: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(iso));
+}
+
+function formatHourLabel(hour: number, minute: number) {
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function getMinutesSinceStart(iso: string) {
+  const d = new Date(iso);
+  return d.getHours() * 60 + d.getMinutes() - START_HOUR * 60;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
 
 export default function Agenda() {
@@ -64,9 +98,17 @@ export default function Agenda() {
     });
   }, []);
 
-  const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
+  const timeSlots = useMemo(() => {
+    return Array.from({ length: TOTAL_SLOTS }, (_, i) => {
+      const totalMinutes = START_HOUR * 60 + i * SLOT_MINUTES;
+      const hour = Math.floor(totalMinutes / 60);
+      const minute = totalMinutes % 60;
+      return { hour, minute };
+    });
+  }, []);
 
   const startRange = weekDays[0];
+
   const endRange = useMemo(() => {
     const d = new Date(weekDays[0]);
     d.setDate(d.getDate() + 7);
@@ -76,14 +118,25 @@ export default function Agenda() {
   async function loadVisitadores() {
     setLoadingVisitadores(true);
     setError(null);
+
     try {
       const data = await getVisitadores();
       setVisitadores(data);
+
       if (data.length > 0) {
-        setSelectedId((prev) => (prev && data.some((v) => v.id === prev) ? prev : data[0].id));
+        setSelectedId((prev) =>
+          prev && data.some((v) => v.id === prev) ? prev : data[0].id
+        );
+      } else {
+        setSelectedId("");
       }
     } catch (err) {
-      setError(getApiErrorMessage(err, "Nao foi possivel carregar a lista de visitadores."));
+      setError(
+        getApiErrorMessage(
+          err,
+          "Nao foi possivel carregar a lista de visitadores."
+        )
+      );
     } finally {
       setLoadingVisitadores(false);
     }
@@ -92,11 +145,17 @@ export default function Agenda() {
   async function loadVisitas(visitadorId: string) {
     setLoadingVisitas(true);
     setError(null);
+
     try {
       const data = await getUpcomingByVisitador(visitadorId);
       setVisitas(data);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Nao foi possivel carregar as visitas do visitador."));
+      setError(
+        getApiErrorMessage(
+          err,
+          "Nao foi possivel carregar as visitas do visitador."
+        )
+      );
     } finally {
       setLoadingVisitas(false);
     }
@@ -105,13 +164,15 @@ export default function Agenda() {
   useEffect(() => {
     if (!me) return;
     loadVisitadores();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (!selectedId) return;
+    if (!selectedId) {
+      setVisitas([]);
+      return;
+    }
+
     loadVisitas(selectedId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
   const visitasSemana = useMemo(() => {
@@ -120,25 +181,43 @@ export default function Agenda() {
         const d = new Date(v.data_hora);
         return d >= startRange && d < endRange;
       })
-      .sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
+      .sort(
+        (a, b) =>
+          new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime()
+      );
   }, [visitas, startRange, endRange]);
 
-  const visitasPorSlot = useMemo(() => {
+  const visitasHoje = useMemo(() => {
+    const hoje = dayKey(new Date());
+    return visitasSemana.filter((v) => dayKey(new Date(v.data_hora)) === hoje)
+      .length;
+  }, [visitasSemana]);
+
+  const visitasPorDia = useMemo(() => {
     const map = new Map<string, Visita[]>();
 
+    for (const day of weekDays) {
+      map.set(dayKey(day), []);
+    }
+
     for (const visita of visitasSemana) {
-      const d = new Date(visita.data_hora);
-      const key = `${dayKey(d)}-${d.getHours()}`;
+      const key = dayKey(new Date(visita.data_hora));
       const list = map.get(key);
-      if (list) {
-        list.push(visita);
-      } else {
-        map.set(key, [visita]);
-      }
+      if (list) list.push(visita);
+    }
+
+    for (const [, list] of map) {
+      list.sort(
+        (a, b) =>
+          new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime()
+      );
     }
 
     return map;
-  }, [visitasSemana]);
+  }, [visitasSemana, weekDays]);
+
+  const nextVisita = visitasSemana[0] ?? null;
+  const selected = visitadores.find((v) => v.id === selectedId);
 
   function logout() {
     localStorage.removeItem("token");
@@ -146,130 +225,283 @@ export default function Agenda() {
     window.location.href = "/login";
   }
 
-  const selected = visitadores.find((v) => v.id === selectedId);
-
   if (!me) {
     return (
-      <div className="page-bg">
-        <div className="page-shell card" style={{ padding: 24 }}>
-          <p>Voce nao esta autenticado.</p>
-          <a href="/login">Ir para login</a>
+      <div className="min-h-screen px-4 py-6">
+        <div className="mx-auto max-w-3xl rounded-3xl border bg-white p-8 shadow-sm">
+          <p className="text-slate-700">Voce nao esta autenticado.</p>
+          <a href="/login" className="mt-3 inline-block text-sm text-sky-700 underline">
+            Ir para login
+          </a>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="page-bg">
-      <div className="page-shell" style={{ display: "grid", gap: 14 }}>
-        <section className="card" style={{ padding: 18 }}>
-          <header
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 12,
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <h2 style={{ margin: 0 }}>Agenda Semanal</h2>
-              <p className="muted" style={{ margin: "4px 0 0" }}>
-                Logado como <strong>{me.login}</strong> ({me.role})
-              </p>
-            </div>
+    <AppShell>
+      <PageHeader
+        title="Agenda semanal"
+        description={`Logado como ${me.login} (${me.role})`}
+        actions={
+          <>
+            <Button
+              onClick={() => navigate(`/visitas/nova?visitadorId=${selectedId}`)}
+              disabled={!selectedId}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Criar visita
+            </Button>
 
-            <div className="toolbar">
-              <button
-                className="btn btn-primary"
-                onClick={() => navigate(`/visitas/nova?visitadorId=${selectedId}`)}
-                disabled={!selectedId}
-              >
-                Criar visita
-              </button>
-              <button className="btn btn-ghost" onClick={loadVisitadores} disabled={loadingVisitadores}>
-                {loadingVisitadores ? "Atualizando..." : "Atualizar visitadores"}
-              </button>
-              <button className="btn btn-danger" onClick={logout}>
-                Sair
-              </button>
-            </div>
-          </header>
+            <Button
+              variant="outline"
+              onClick={loadVisitadores}
+              disabled={loadingVisitadores}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {loadingVisitadores ? "Atualizando..." : "Atualizar"}
+            </Button>
 
-          <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-            <label>
+            <Button variant="outline" onClick={logout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
+          </>
+        }
+      />
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="rounded-3xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarDays className="h-4 w-4" />
+              Visitas na semana
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-3xl font-semibold">
+            {visitasSemana.length}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-3xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Clock3 className="h-4 w-4" />
+              Visitas hoje
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-3xl font-semibold">
+            {visitasHoje}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-3xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <UserRound className="h-4 w-4" />
+              Visitador selecionado
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-lg font-medium">
+            {selected ? selected.login : "Nenhum visitador"}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="rounded-3xl">
+        <CardHeader>
+          <CardTitle>Filtros e contexto</CardTitle>
+        </CardHeader>
+
+        <CardContent className="grid gap-4">
+          <div className="grid gap-2 md:max-w-sm">
+            <label
+              htmlFor="visitador"
+              className="text-sm font-medium text-slate-700"
+            >
               Visitador
-              <select
-                className="select"
-                value={selectedId}
-                onChange={(e) => setSelectedId(e.target.value)}
-                disabled={loadingVisitadores || visitadores.length === 0}
-                style={{ maxWidth: 360 }}
-              >
-                {visitadores.length === 0 && <option value="">Nenhum visitador</option>}
-                {visitadores.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.login}
-                  </option>
-                ))}
-              </select>
             </label>
 
-            {!error && selected && (
-              <p className="muted" style={{ margin: 0 }}>
-                Janela exibida: 7 dias a partir de hoje para <strong>{selected.login}</strong>
-              </p>
-            )}
+            <select
+              id="visitador"
+              value={selectedId}
+              onChange={(e) => setSelectedId(e.target.value)}
+              disabled={loadingVisitadores || visitadores.length === 0}
+              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-400"
+            >
+              {visitadores.length === 0 && (
+                <option value="">Nenhum visitador</option>
+              )}
 
-            {error && <p className="error" style={{ margin: 0 }}>{error}</p>}
-            {loadingVisitas && <p className="muted" style={{ margin: 0 }}>Carregando visitas...</p>}
-          </div>
-        </section>
-
-        <section className="card" style={{ padding: 14 }}>
-          <div className="calendar-wrap">
-            <div className="calendar-grid">
-              <div className="calendar-head">Hora</div>
-              {weekDays.map((day) => (
-                <div className="calendar-head" key={day.toISOString()}>
-                  {formatWeekday(day)}
-                </div>
+              {visitadores.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.login}
+                </option>
               ))}
+            </select>
+          </div>
 
-              {hours.map((hour) => (
-                <Fragment key={`row-${hour}`}>
-                  <div className="calendar-time">{hourLabel(hour)}</div>
+          {!error && selected ? (
+            <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              Janela exibida: 7 dias a partir de hoje para{" "}
+              <span className="font-medium text-slate-900">
+                {selected.login}
+              </span>
+              .
+              {nextVisita ? (
+                <>
+                  {" "}Proxima visita às{" "}
+                  <span className="font-medium text-slate-900">
+                    {formatTime(nextVisita.data_hora)}
+                  </span>
+                  .
+                </>
+              ) : null}
+            </div>
+          ) : null}
+
+          {error ? (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {error}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-3xl">
+        <CardHeader>
+          <CardTitle>Agenda semanal</CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          {loadingVisitas ? (
+            <LoadingState />
+          ) : !error && selected && visitasSemana.length === 0 ? (
+            <EmptyState
+              title="Nenhuma visita nesta semana"
+              description="Nao ha visitas futuras para este visitador na janela de 7 dias."
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <div className="min-w-[1180px] overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className="grid grid-cols-[90px_repeat(7,minmax(150px,1fr))]">
+                  <div className="border-b border-r bg-slate-100 px-3 py-3 text-sm font-semibold text-slate-700">
+                    Hora
+                  </div>
+
+                  {weekDays.map((day) => (
+                    <div
+                      key={day.toISOString()}
+                      className="border-b border-r bg-slate-100 px-3 py-3 text-sm font-semibold text-slate-700 last:border-r-0"
+                    >
+                      {formatWeekday(day)}
+                    </div>
+                  ))}
+
+                  <div className="border-r bg-white">
+                    <div style={{ height: DAY_COLUMN_HEIGHT }}>
+                      {timeSlots.map(({ hour, minute }, index) => (
+                        <div
+                          key={`time-${hour}-${minute}`}
+                          className="border-b border-slate-200 px-3 py-2 text-sm text-slate-500"
+                          style={{ height: SLOT_HEIGHT }}
+                        >
+                          {index < TOTAL_SLOTS ? formatHourLabel(hour, minute) : ""}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   {weekDays.map((day) => {
-                    const key = `${dayKey(day)}-${hour}`;
-                    const slotVisitas = visitasPorSlot.get(key) ?? [];
+                    const key = dayKey(day);
+                    const dayVisitas = visitasPorDia.get(key) ?? [];
+
                     return (
-                      <div key={`${key}-cell`} className="calendar-cell">
-                        {slotVisitas.map((v) => (
-                          <article className="event-card" key={v.id}>
-                            <p className="event-title">{formatTime(v.data_hora)} - {v.nome_cliente}</p>
-                            <p className="event-sub">Tel: {v.telefone_cliente}</p>
-                            <p className="event-sub">Chaves: {v.chaves}</p>
-                            <p className="event-sub">
-                              {v.status ? <span className="badge">{v.status}</span> : null}
-                              {v.duracao_minutos ? ` ${v.duracao_minutos}min` : ""}
-                            </p>
-                          </article>
+                      <div
+                        key={`day-col-${key}`}
+                        className="relative border-r last:border-r-0"
+                        style={{ height: DAY_COLUMN_HEIGHT }}
+                      >
+                        {timeSlots.map(({ hour, minute }) => (
+                          <div
+                            key={`line-${key}-${hour}-${minute}`}
+                            className="border-b border-slate-200"
+                            style={{ height: SLOT_HEIGHT }}
+                          />
                         ))}
+
+                        {dayVisitas.map((v) => {
+                          const rawTopMinutes = getMinutesSinceStart(v.data_hora);
+                          const durationMinutes = Math.max(v.duracao_minutos ?? 30, 30);
+
+                          const topMinutes = clamp(
+                            rawTopMinutes,
+                            0,
+                            (END_HOUR - START_HOUR) * 60
+                          );
+
+                          const bottomMinutes = clamp(
+                            rawTopMinutes + durationMinutes,
+                            0,
+                            (END_HOUR - START_HOUR) * 60
+                          );
+
+                          const visibleDurationMinutes = Math.max(
+                            bottomMinutes - topMinutes,
+                            30
+                          );
+
+                          const top = (topMinutes / SLOT_MINUTES) * SLOT_HEIGHT;
+                          const height =
+                            (visibleDurationMinutes / SLOT_MINUTES) * SLOT_HEIGHT;
+
+                          return (
+                            <article
+                              key={v.id}
+                              className="absolute left-1 right-1 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 shadow-sm"
+                              style={{
+                                top,
+                                height,
+                              }}
+                            >
+                              <p className="text-xs font-semibold text-slate-900">
+                                {formatTime(v.data_hora)} - {v.nome_cliente}
+                              </p>
+
+                              <p className="mt-1 text-xs text-slate-500">
+                                Tel: {v.telefone_cliente}
+                              </p>
+
+                              <p className="mt-1 text-xs text-slate-500">
+                                Chaves: {v.chaves}
+                              </p>
+
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <StatusBadge status={v.status ?? null} />
+                                {v.duracao_minutos ? (
+                                  <span className="text-[11px] text-slate-500">
+                                    {v.duracao_minutos} min
+                                  </span>
+                                ) : null}
+                              </div>
+
+                              {height >= 120 && v.observacoes ? (
+                                <div className="mt-2 rounded-lg bg-white/70 px-2 py-1 text-[11px] text-slate-600">
+                                  {v.observacoes}
+                                </div>
+                              ) : null}
+                            </article>
+                          );
+                        })}
                       </div>
                     );
                   })}
-                </Fragment>
-              ))}
+                </div>
+              </div>
             </div>
-          </div>
-
-          {!loadingVisitas && !error && selected && visitasSemana.length === 0 && (
-            <p className="muted" style={{ margin: "12px 0 0" }}>
-              Nenhuma visita deste visitador nesta janela de 7 dias.
-            </p>
           )}
-        </section>
-      </div>
-    </div>
+        </CardContent>
+      </Card>
+    </AppShell>
   );
 }
