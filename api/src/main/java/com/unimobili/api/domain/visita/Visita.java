@@ -23,7 +23,6 @@ public class Visita {
     private UUID id;
 
     private OffsetDateTime criado_em;
-
     private OffsetDateTime data_hora;
 
     @ManyToOne(optional = false)
@@ -35,11 +34,8 @@ public class Visita {
     private User designadoA;
 
     private String nome_cliente;
-
     private String telefone_cliente;
-
     private String chaves;
-
     private String observacoes;
 
     @Enumerated(EnumType.STRING)
@@ -49,4 +45,7 @@ public class Visita {
 
     private Integer duracao_minutos;
     private OffsetDateTime data_hora_fim;
+
+    // Endereço do imóvel (campo livre)
+    private String endereco_imovel;
 }

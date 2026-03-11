@@ -482,6 +482,12 @@ export default function Agenda() {
                                 Chaves: {v.chaves}
                               </p>
 
+                              {v.endereco_imovel && (
+                                <p className="mt-1 text-xs text-slate-500 truncate">
+                                  📍 {v.endereco_imovel}
+                                </p>
+                              )}
+
                               <div className="mt-2 flex flex-wrap items-center gap-2">
                                 <StatusBadge status={v.status ?? null} />
                                 {v.duracao_minutos ? (

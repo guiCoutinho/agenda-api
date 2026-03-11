@@ -67,6 +67,7 @@ export default function NovaVisita() {
   const [chaves, setChaves] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [duracaoMinutos, setDuracaoMinutos] = useState<number | "">("");
+  const [enderecoImovel, setEnderecoImovel] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -152,6 +153,7 @@ export default function NovaVisita() {
         chaves: chaves.trim(),
         observacoes: observacoes.trim() ? observacoes.trim() : undefined,
         duracao_minutos: duracaoMinutos === "" ? undefined : duracaoMinutos,
+        endereco_imovel: enderecoImovel.trim() || undefined,
       });
 
       navigate("/agenda");
@@ -231,6 +233,16 @@ export default function NovaVisita() {
                   value={chaves}
                   onChange={(e) => setChaves(e.target.value)}
                   required
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="enderecoImovel">Endereço do imóvel</Label>
+                <Input
+                  id="enderecoImovel"
+                  value={enderecoImovel}
+                  onChange={(e) => setEnderecoImovel(e.target.value)}
+                  placeholder="Ex: Rua das Flores, 123, Apto 4, Jardim Primavera, São Paulo - SP"
                 />
               </div>
             </CardContent>

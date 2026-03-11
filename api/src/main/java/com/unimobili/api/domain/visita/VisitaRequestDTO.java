@@ -9,5 +9,6 @@ public record VisitaRequestDTO(
         String telefone_cliente,
         String chaves,
         String observacoes,
-        Integer duracao_minutos
+        Integer duracao_minutos,
+        String endereco_imovel
 ) {}

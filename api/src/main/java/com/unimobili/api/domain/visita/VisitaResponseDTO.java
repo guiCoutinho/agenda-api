@@ -19,5 +19,6 @@ public record VisitaResponseDTO(
         String observacoes,
         StatusVisita status,
         Boolean ativa,
-        Integer duracao_minutos
+        Integer duracao_minutos,
+        String endereco_imovel
 ) {}
