@@ -1,310 +1,171 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  CalendarDays,
-  Clock3,
-  LogOut,
-  RefreshCw,
-  MessageCircle,
-} from "lucide-react";
-
-import { AppShell } from "@/components/layout/app-shell";
-import { PageHeader } from "@/components/layout/page-header";
-import { EmptyState } from "@/components/shared/empty-state";
-import { LoadingState } from "@/components/shared/loading-state";
-import { StatusBadge } from "@/components/shared/status-badge";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-
+import { CalendarDays, Clock3, MessageCircle, RefreshCw } from "lucide-react";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatDateOnly, formatDateTime, formatTime } from "@/lib/format";
 import { getUpcomingByVisitador, type Visita } from "@/services/visitas";
 
-type Me = {
-  id: string;
-  login: string;
-  role: string;
-};
+type Me = { id: string; login: string; role: string };
 
 export default function VisitadorUpcoming() {
   const [loading, setLoading] = useState(true);
   const [visitas, setVisitas] = useState<Visita[]>([]);
-
   const me: Me | null = JSON.parse(localStorage.getItem("me") || "null");
 
   async function loadData() {
-    if (!me?.id) {
-      setLoading(false);
-      return;
-    }
-
+    if (!me?.id) { setLoading(false); return; }
     setLoading(true);
-    try {
-      const data = await getUpcomingByVisitador(me.id);
-      setVisitas(data);
-    } finally {
-      setLoading(false);
-    }
+    try { const data = await getUpcomingByVisitador(me.id); setVisitas(data); }
+    finally { setLoading(false); }
   }
+  useEffect(() => { loadData(); }, []);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  function isToday(dateString: string) {
-    const date = new Date(dateString);
-    const now = new Date();
-
-    return (
-      date.getFullYear() === now.getFullYear() &&
-      date.getMonth() === now.getMonth() &&
-      date.getDate() === now.getDate()
-    );
+  function isToday(ds: string) {
+    const d = new Date(ds), now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
   }
 
   function getWhatsAppLink(phone: string) {
     const digits = phone.replace(/\D/g, "");
-
     if (!digits) return "#";
-
-    const withCountryCode = digits.startsWith("55") ? digits : `55${digits}`;
-    const text = encodeURIComponent(
-      "Olá! Estou entrando em contato sobre a visita agendada."
-    );
-
-    return `https://wa.me/${withCountryCode}?text=${text}`;
+    const cc = digits.startsWith("55") ? digits : `55${digits}`;
+    return `https://wa.me/${cc}?text=${encodeURIComponent("Olá! Estou entrando em contato sobre a visita agendada.")}`;
   }
 
-  const visitasHoje = useMemo(() => {
-    return visitas.filter((visita) => isToday(visita.data_hora));
+  const visitasHoje    = useMemo(() => visitas.filter(v => isToday(v.data_hora)), [visitas]);
+  const proximosDias   = useMemo(() => visitas.filter(v => !isToday(v.data_hora)), [visitas]);
+  const nextVisita     = visitas[0] ?? null;
+  const totalSemana    = useMemo(() => {
+    const now = new Date(), in7 = new Date(); in7.setDate(now.getDate() + 7);
+    return visitas.filter(v => { const d = new Date(v.data_hora); return d >= now && d <= in7; }).length;
   }, [visitas]);
-
-  const proximosDias = useMemo(() => {
-    return visitas.filter((visita) => !isToday(visita.data_hora));
-  }, [visitas]);
-
-  const nextVisita = visitas[0] ?? null;
-
-  const totalSemana = useMemo(() => {
-    const now = new Date();
-    const inSevenDays = new Date();
-    inSevenDays.setDate(now.getDate() + 7);
-
-    return visitas.filter((v) => {
-      const d = new Date(v.data_hora);
-      return d >= now && d <= inSevenDays;
-    }).length;
-  }, [visitas]);
-
-  function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("me");
-    window.location.href = "/login";
-  }
 
   return (
-    <AppShell>
-      <PageHeader
-        title={`Olá, ${me?.login ?? "visitador"}`}
-        description="Aqui estão suas próximas visitas agendadas."
-        actions={
-          <>
-            <Button variant="outline" onClick={loadData}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Atualizar
-            </Button>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
-          </>
-        }
-      />
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="rounded-3xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CalendarDays className="h-4 w-4" />
-              Próximas visitas
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-3xl font-semibold">
-            {visitas.length}
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Clock3 className="h-4 w-4" />
-              Visitas em 7 dias
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-3xl font-semibold">
-            {totalSemana}
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl">
-          <CardHeader>
-            <CardTitle className="text-base">Próximo horário</CardTitle>
-          </CardHeader>
-          <CardContent className="text-lg font-medium">
-            {nextVisita ? formatDateTime(nextVisita.data_hora) : "Nenhum agendamento"}
-          </CardContent>
-        </Card>
+    <AppLayout onRefresh={loadData} loadingRefresh={loading}>
+      {/* Header */}
+      <div className="page-header-row">
+        <div>
+          <p className="page-subtitle">Bem-vindo de volta</p>
+          <h1 className="page-title">Olá, {me?.login ?? "visitador"}</h1>
+        </div>
+        <div className="page-header-actions">
+          <button className="btn btn-outline btn-sm" onClick={loadData} disabled={loading}>
+            <RefreshCw size={13} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} />
+            Atualizar
+          </button>
+        </div>
       </div>
 
-      <Card className="rounded-3xl">
-        <CardHeader>
-          <CardTitle>Agenda</CardTitle>
-        </CardHeader>
+      {/* Stats */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon"><CalendarDays size={17} /></div>
+          <div className="stat-label">Total agendado</div>
+          <div className="stat-value">{visitas.length}</div>
+          <div className="stat-sub">visitas futuras</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon"><Clock3 size={17} /></div>
+          <div className="stat-label">Próximos 7 dias</div>
+          <div className="stat-value">{totalSemana}</div>
+          <div className="stat-sub">visitas na semana</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon"><CalendarDays size={17} /></div>
+          <div className="stat-label">Próximo horário</div>
+          <div className="stat-value" style={{ fontSize: "1.05rem", lineHeight: 1.3, marginTop: "0.3rem" }}>
+            {nextVisita ? formatDateTime(nextVisita.data_hora) : "—"}
+          </div>
+        </div>
+      </div>
 
-        <CardContent>
+      {/* Visits */}
+      <div className="uni-card">
+        <div className="uni-card-header">
+          <span className="uni-card-title">Agenda</span>
+          {!loading && (
+            <span style={{ fontSize: "0.76rem", color: "#5a6a7e" }}>
+              {visitas.length} visita{visitas.length !== 1 ? "s" : ""} agendada{visitas.length !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+        <div className="uni-card-body">
           {loading ? (
-            <LoadingState />
+            <div style={{ textAlign: "center", padding: "2.5rem 0", color: "#aaa", fontSize: "0.88rem" }}>Carregando...</div>
           ) : visitas.length === 0 ? (
-            <EmptyState
-              title="Nenhuma visita agendada"
-              description="Quando houver novos agendamentos, eles aparecerão aqui."
-            />
+            <div style={{ textAlign: "center", padding: "2.5rem 0" }}>
+              <CalendarDays size={34} style={{ color: "#ddd", margin: "0 auto 0.75rem", display: "block" }} />
+              <p style={{ fontSize: "0.88rem", color: "#999", margin: 0 }}>Nenhuma visita agendada.</p>
+              <p style={{ fontSize: "0.8rem", color: "#bbb", marginTop: "0.4rem" }}>Quando houver novos agendamentos, eles aparecerão aqui.</p>
+            </div>
           ) : (
-            <div className="space-y-6">
-              {visitasHoje.length > 0 ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-700">
-                      Hoje
-                    </h3>
-                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              {visitasHoje.length > 0 && (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+                    <span className="section-label" style={{ color: "#b8912a" }}>Hoje</span>
+                    <span style={{ background: "#fdf8ee", color: "#b8912a", border: "1px solid #e0d0a8", borderRadius: 100, padding: "0.13rem 0.62rem", fontSize: "0.7rem", fontWeight: 700 }}>
                       {visitasHoje.length} visita{visitasHoje.length > 1 ? "s" : ""}
                     </span>
                   </div>
-
-                  <div className="grid gap-4">
-                    {visitasHoje.map((visita) => (
-                      <div
-                        key={visita.id}
-                        className="rounded-2xl border border-blue-300 bg-blue-50 p-4 shadow-sm"
-                      >
-                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                          <div className="space-y-1">
-                            <h3 className="text-base font-semibold text-slate-900">
-                              {visita.nome_cliente}
-                            </h3>
-                            <p className="text-sm text-slate-600">
-                              {formatDateOnly(visita.data_hora)} às {formatTime(visita.data_hora)}
-                            </p>
-
-                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <span>Telefone: {visita.telefone_cliente}</span>
-                              <a
-                                href={getWhatsAppLink(visita.telefone_cliente)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-600 transition hover:bg-emerald-100"
-                                title="Abrir conversa no WhatsApp"
-                              >
-                                <MessageCircle className="h-4 w-4" />
-                              </a>
-                            </div>
-
-                            <p className="text-sm text-slate-600">
-                              Chaves: {visita.chaves}
-                            </p>
-
-                            {visita.duracao_minutos ? (
-                              <p className="text-sm text-slate-600">
-                                Duração: {visita.duracao_minutos} min
-                              </p>
-                            ) : null}
-                          </div>
-
-                          <div className="flex items-start">
-                            <StatusBadge status={visita.status ?? null} />
-                          </div>
-                        </div>
-
-                        {visita.observacoes ? (
-                          <div className="mt-3 rounded-xl bg-white px-3 py-2 text-sm text-slate-600">
-                            {visita.observacoes}
-                          </div>
-                        ) : null}
-                      </div>
-                    ))}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+                    {visitasHoje.map(v => <VisitaCard key={v.id} visita={v} today getWa={getWhatsAppLink} />)}
                   </div>
                 </div>
-              ) : null}
-
-              {proximosDias.length > 0 ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                      Próximos dias
-                    </h3>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+              )}
+              {proximosDias.length > 0 && (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+                    <span className="section-label">Próximos dias</span>
+                    <span style={{ background: "#f3f4f6", color: "#6b7280", borderRadius: 100, padding: "0.13rem 0.62rem", fontSize: "0.7rem", fontWeight: 700 }}>
                       {proximosDias.length} visita{proximosDias.length > 1 ? "s" : ""}
                     </span>
                   </div>
-
-                  <div className="grid gap-4">
-                    {proximosDias.map((visita) => (
-                      <div
-                        key={visita.id}
-                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4 opacity-80"
-                      >
-                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                          <div className="space-y-1">
-                            <h3 className="text-base font-semibold text-slate-900">
-                              {visita.nome_cliente}
-                            </h3>
-                            <p className="text-sm text-slate-500">
-                              {formatDateOnly(visita.data_hora)} às {formatTime(visita.data_hora)}
-                            </p>
-
-                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <span>Telefone: {visita.telefone_cliente}</span>
-                              <a
-                                href={getWhatsAppLink(visita.telefone_cliente)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-600 transition hover:bg-emerald-100"
-                                title="Abrir conversa no WhatsApp"
-                              >
-                                <MessageCircle className="h-4 w-4" />
-                              </a>
-                            </div>
-
-                            <p className="text-sm text-slate-600">
-                              Chaves: {visita.chaves}
-                            </p>
-
-                            {visita.duracao_minutos ? (
-                              <p className="text-sm text-slate-600">
-                                Duração: {visita.duracao_minutos} min
-                              </p>
-                            ) : null}
-                          </div>
-
-                          <div className="flex items-start">
-                            <StatusBadge status={visita.status ?? null} />
-                          </div>
-                        </div>
-
-                        {visita.observacoes ? (
-                          <div className="mt-3 rounded-xl bg-white px-3 py-2 text-sm text-slate-600">
-                            {visita.observacoes}
-                          </div>
-                        ) : null}
-                      </div>
-                    ))}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+                    {proximosDias.map(v => <VisitaCard key={v.id} visita={v} today={false} getWa={getWhatsAppLink} />)}
                   </div>
                 </div>
-              ) : null}
+              )}
             </div>
           )}
-        </CardContent>
-      </Card>
-    </AppShell>
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
+
+function VisitaCard({ visita, today, getWa }: { visita: Visita; today: boolean; getWa: (p: string) => string }) {
+  return (
+    <div className={`visita-card ${today ? "today-card" : ""}`}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", marginBottom: "0.3rem", flexWrap: "wrap" }}>
+            <span style={{ fontWeight: 700, fontSize: "0.95rem", color: "#0d1b2e" }}>{visita.nome_cliente}</span>
+            <StatusBadge status={visita.status ?? null} />
+          </div>
+          <div style={{ fontSize: "0.8rem", color: "#5a6a7e", display: "flex", flexDirection: "column", gap: "0.18rem" }}>
+            <span>📅 {formatDateOnly(visita.data_hora)} às {formatTime(visita.data_hora)}{visita.duracao_minutos ? ` · ${visita.duracao_minutos} min` : ""}</span>
+            <span>🔑 Chaves: {visita.chaves}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+              <span>📞 {visita.telefone_cliente}</span>
+              <a
+                href={getWa(visita.telefone_cliente)}
+                target="_blank" rel="noreferrer"
+                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: "50%", background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#059669", textDecoration: "none", flexShrink: 0 }}
+                title="WhatsApp"
+              >
+                <MessageCircle size={12} />
+              </a>
+            </div>
+            {visita.endereco_imovel && <span>📍 {visita.endereco_imovel}</span>}
+          </div>
+        </div>
+      </div>
+      {visita.observacoes && (
+        <div style={{ marginTop: "0.65rem", background: "#f9f9f9", borderRadius: 8, padding: "0.45rem 0.7rem", fontSize: "0.78rem", color: "#6b7280" }}>
+          {visita.observacoes}
+        </div>
+      )}
+    </div>
   );
 }

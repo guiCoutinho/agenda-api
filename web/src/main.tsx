@@ -15,16 +15,10 @@ type UserRole = "ADMIN" | "ATENDENTE" | "VISITADOR";
 function IndexRedirect() {
   const token = localStorage.getItem("token");
   const meRaw = localStorage.getItem("me");
-
   if (!token || !meRaw) return <Navigate to="/login" replace />;
-
   const me = JSON.parse(meRaw) as { role: UserRole; mustChangePassword?: boolean };
-
-  if (me.mustChangePassword) {
-    return <Navigate to="/trocar-senha" replace />;
-  }
-
-return <Navigate to={me.role === "VISITADOR" ? "/visitador" : "/agenda"} replace />;
+  if (me.mustChangePassword) return <Navigate to="/trocar-senha" replace />;
+  return <Navigate to={me.role === "VISITADOR" ? "/visitador" : "/agenda"} replace />;
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -33,48 +27,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<IndexRedirect />} />
-
-        <Route
-          path="/visitador"
-          element={
-            <RequireRole allowed={["VISITADOR"]}>
-              <VisitadorUpcoming />
-            </RequireRole>
-          }
-        />
-
-        <Route
-          path="/agenda"
-          element={
-            <RequireRole allowed={["ADMIN", "ATENDENTE"]}>
-              <Agenda />
-            </RequireRole>
-          }
-        />
-
-        <Route
-          path="/visitas/nova"
-          element={
-            <RequireRole allowed={["ADMIN", "ATENDENTE"]}>
-              <NovaVisita />
-            </RequireRole>
-          }
-        />
-
-        <Route
-          path="/usuarios/novo"
-          element={
-            <RequireRole allowed={["ADMIN"]}>
-              <NovoUsuario />
-            </RequireRole>
-          }
-        />
-
-        <Route
-          path="/trocar-senha"
-            element={<TrocarSenha />}
-        />
-
+        <Route path="/visitador" element={<RequireRole allowed={["VISITADOR"]}><VisitadorUpcoming /></RequireRole>} />
+        <Route path="/agenda" element={<RequireRole allowed={["ADMIN", "ATENDENTE"]}><Agenda /></RequireRole>} />
+        <Route path="/visitas/nova" element={<RequireRole allowed={["ADMIN", "ATENDENTE"]}><NovaVisita /></RequireRole>} />
+        <Route path="/usuarios/novo" element={<RequireRole allowed={["ADMIN"]}><NovoUsuario /></RequireRole>} />
+        <Route path="/trocar-senha" element={<TrocarSenha />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

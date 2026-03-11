@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { KeyRound, Save } from "lucide-react";
 import { changeMyPassword, getMe } from "@/services/users";
 
 export default function TrocarSenha() {
@@ -16,30 +13,14 @@ export default function TrocarSenha() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-
-    if (password.length < 4) {
-      setError("A senha deve ter pelo menos 4 caracteres.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("As senhas não coincidem.");
-      return;
-    }
-
+    if (password.length < 4) { setError("A senha deve ter pelo menos 4 caracteres."); return; }
+    if (password !== confirmPassword) { setError("As senhas não coincidem."); return; }
     setLoading(true);
-
     try {
       await changeMyPassword(password);
-
       const me = await getMe();
       localStorage.setItem("me", JSON.stringify(me));
-
-      if (me.role === "VISITADOR") {
-        navigate("/visitador");
-      } else {
-        navigate("/agenda");
-      }
+      navigate(me.role === "VISITADOR" ? "/visitador" : "/agenda");
     } catch {
       setError("Não foi possível trocar a senha.");
     } finally {
@@ -48,51 +29,46 @@ export default function TrocarSenha() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-6 flex items-center justify-center">
-      <Card className="w-full max-w-md rounded-3xl border-slate-200 shadow-sm">
-        <CardHeader>
-          <CardTitle>Trocar senha</CardTitle>
-          <CardDescription>
-            No primeiro acesso, você precisa definir uma nova senha.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="password">Nova senha</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+    <div style={{ minHeight: "100vh", background: "#f0ede8", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
+      <div style={{ width: "100%", maxWidth: "420px" }}>
+        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+          <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: "2rem", color: "#0d1b2e" }}>
+            Unimobili<span style={{ color: "#b8912a" }}>.</span>
+          </div>
+        </div>
+        <div className="login-form-card">
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, #f6f1e5, #ede7d2)", display: "flex", alignItems: "center", justifyContent: "center", color: "#b8912a" }}>
+              <KeyRound size={18} />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar senha</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
+            <div>
+              <h2 style={{ margin: 0, fontFamily: "'DM Serif Display', serif", fontSize: "1.3rem", color: "#0d1b2e" }}>Trocar senha</h2>
+              <p style={{ margin: 0, fontSize: "0.8rem", color: "#5a6a7e", marginTop: 2 }}>Defina uma nova senha para continuar.</p>
             </div>
+          </div>
 
-            {error ? (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                {error}
-              </div>
-            ) : null}
-
-            <Button type="submit" className="w-full rounded-xl" disabled={loading}>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div className="form-group">
+              <label className="form-label">Nova senha</label>
+              <input className="form-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Confirmar senha</label>
+              <input className="form-input" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+            </div>
+            {error && <div className="alert alert-error">{error}</div>}
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ width: "100%", justifyContent: "center", marginTop: "0.5rem" }}
+              disabled={loading}
+            >
+              <Save size={15} />
               {loading ? "Salvando..." : "Salvar nova senha"}
-            </Button>
+            </button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

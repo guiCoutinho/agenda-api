@@ -1,128 +1,123 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogIn, ShieldCheck } from "lucide-react";
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-
+import { LogIn, Building2, ShieldCheck } from "lucide-react";
 import { loginRequest } from "@/services/auth";
 import { getMe } from "@/services/users";
 
 export default function Login() {
   const navigate = useNavigate();
-
   const [loginValue, setLoginValue] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [password, setPassword]     = useState("");
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
+    e.preventDefault(); setError(""); setLoading(true);
     try {
-      const authResponse = await loginRequest({
-        login: loginValue,
-        password,
-      });
-
+      const authResponse = await loginRequest({ login: loginValue, password });
       localStorage.setItem("token", authResponse.token);
-
       const me = await getMe();
       localStorage.setItem("me", JSON.stringify(me));
-
-      if (me.mustChangePassword) {
-        navigate("/trocar-senha");
-      } else if (me.role === "VISITADOR") {
-        navigate("/visitador");
-      } else {
-        navigate("/agenda");
-      }
-    } catch {
-      setError("Login ou senha inválidos.");
-    } finally {
-      setLoading(false);
-    }
+      if (me.mustChangePassword) navigate("/trocar-senha");
+      else if (me.role === "VISITADOR") navigate("/visitador");
+      else navigate("/agenda");
+    } catch { setError("Login ou senha inválidos."); }
+    finally { setLoading(false); }
   }
 
   return (
-    <div className="min-h-screen bg-transparent px-4 py-6">
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-xl lg:grid-cols-2">
-        <div className="hidden bg-[linear-gradient(135deg,#0f766e,#1d4ed8)] p-10 text-white lg:flex lg:flex-col lg:justify-between">
-          <div>
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium backdrop-blur">
-              <ShieldCheck className="h-4 w-4" />
-              Plataforma interna
-            </div>
-
-            <h1 className="max-w-md text-4xl font-semibold leading-tight">
-              Unimobili.
-            </h1>
-
-            <p className="mt-4 max-w-md text-sm text-white/85">
-              Centralize os agendamentos, acompanhe visitas e mantenha a operação organizada em um só lugar.
-            </p>
+    <div className="login-split">
+      {/* Left decorative panel — visible only on lg+ */}
+      <div className="login-left">
+        <div className="login-left-glow" />
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: "0.5rem",
+            background: "rgba(184,145,42,0.15)", border: "1px solid rgba(184,145,42,0.25)",
+            borderRadius: "100px", padding: "0.38rem 1rem",
+            fontSize: "0.76rem", fontWeight: 600, color: "#d4ab4a",
+            letterSpacing: "0.06em", textTransform: "uppercase",
+            marginBottom: "2rem"
+          }}>
+            <ShieldCheck size={12} /> Plataforma interna
           </div>
-
-          <div className="rounded-3xl border border-white/15 bg-white/10 p-6 backdrop-blur">
-            <p className="text-sm text-white/85">
-              Acesso restrito para funcionários.
-            </p>
+          <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: "2.75rem", color: "#fff", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+            Unimobili<span style={{ color: "#d4ab4a" }}>.</span>
           </div>
+          <p style={{ marginTop: "1rem", fontSize: "0.93rem", color: "rgba(255,255,255,0.58)", maxWidth: 340, lineHeight: 1.7 }}>
+            Centralize agendamentos, acompanhe visitas e mantenha a operação organizada em um só lugar.
+          </p>
         </div>
+        <div style={{
+          position: "relative", zIndex: 1,
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "14px", padding: "1.1rem 1.4rem",
+          background: "rgba(255,255,255,0.04)",
+        }}>
+          <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.42)", margin: 0 }}>
+            Acesso restrito aos colaboradores da Unimobili.
+          </p>
+        </div>
+      </div>
 
-        <div className="flex items-center justify-center bg-slate-50 p-6 md:p-10">
-          <Card className="w-full max-w-md rounded-3xl border-slate-200 shadow-sm">
-            <CardHeader className="space-y-2">
-              <CardTitle className="text-2xl">Entrar</CardTitle>
-              <CardDescription>
-                Use suas credenciais para acessar o sistema.
-              </CardDescription>
-            </CardHeader>
+      {/* Right: login form */}
+      <div className="login-right">
+        <div style={{ width: "100%", maxWidth: "420px" }}>
+          {/* Brand (shown on all sizes, especially important on mobile where left panel is hidden) */}
+          <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+            <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: "2rem", color: "#0d1b2e", letterSpacing: "-0.02em" }}>
+              Unimobili<span style={{ color: "#b8912a" }}>.</span>
+            </div>
+            <p style={{ marginTop: "0.35rem", fontSize: "0.82rem", color: "#5a6a7e", margin: "0.35rem 0 0" }}>
+              Acesso restrito — colaboradores
+            </p>
+          </div>
 
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="login">Login</Label>
-                  <Input
-                    id="login"
-                    value={loginValue}
-                    onChange={(e) => setLoginValue(e.target.value)}
-                    placeholder="Seu login"
-                    autoComplete="username"
-                    required
-                  />
-                </div>
+          <div className="login-form-card">
+            <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.45rem", color: "#0d1b2e", margin: "0 0 0.2rem" }}>
+              Entrar
+            </h2>
+            <p style={{ fontSize: "0.82rem", color: "#5a6a7e", margin: "0 0 1.6rem" }}>
+              Use suas credenciais para acessar o sistema.
+            </p>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Sua senha"
-                    autoComplete="current-password"
-                    required
-                  />
-                </div>
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div className="form-group">
+                <label className="form-label">Login</label>
+                <input
+                  className="form-input"
+                  value={loginValue}
+                  onChange={e => setLoginValue(e.target.value)}
+                  placeholder="Seu login"
+                  autoComplete="username"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Senha</label>
+                <input
+                  className="form-input"
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Sua senha"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
 
-                {error ? (
-                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                    {error}
-                  </div>
-                ) : null}
+              {error && <div className="alert alert-error">{error}</div>}
 
-                <Button type="submit" className="w-full rounded-xl" disabled={loading}>
-                  <LogIn className="mr-2 h-4 w-4" />
-                  {loading ? "Entrando..." : "Entrar"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+              <button
+                type="submit"
+                className="btn btn-primary btn-lg"
+                style={{ width: "100%", justifyContent: "center", marginTop: "0.5rem" }}
+                disabled={loading}
+              >
+                <LogIn size={16} /> {loading ? "Entrando..." : "Entrar"}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

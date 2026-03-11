@@ -1,148 +1,79 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, CalendarPlus, Save, UserRound } from "lucide-react";
-
-import { AppShell } from "@/components/layout/app-shell";
-import { PageHeader } from "@/components/layout/page-header";
-
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-
+import { ArrowLeft, CalendarPlus, Save, UserRound, Clock, MapPin } from "lucide-react";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { getApiErrorMessage } from "@/services/api";
 import { createVisita } from "@/services/visitas";
 import { getVisitadores } from "@/services/visitadores";
 import type { UserRole } from "@/services/users";
 
-type Me = {
-  id: string;
-  login: string;
-  role: UserRole;
-};
+type Me = { id: string; login: string; role: UserRole };
 
 function toBackendOffsetDateTime(date: string, time: string) {
   const [yyyy, mm, dd] = date.split("-").map(Number);
   const [hh, min] = time.split(":").map(Number);
-
   const d = new Date(yyyy, mm - 1, dd, hh, min, 0, 0);
-
   const pad = (n: number) => String(n).padStart(2, "0");
-
-  const year = d.getFullYear();
-  const month = pad(d.getMonth() + 1);
-  const day = pad(d.getDate());
-  const hours = pad(d.getHours());
-  const minutes = pad(d.getMinutes());
-  const seconds = "00";
-
   const offsetMin = -d.getTimezoneOffset();
   const sign = offsetMin >= 0 ? "+" : "-";
   const abs = Math.abs(offsetMin);
-  const offH = pad(Math.floor(abs / 60));
-  const offM = pad(abs % 60);
-
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${sign}${offH}:${offM}`;
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00${sign}${pad(Math.floor(abs/60))}:${pad(abs%60)}`;
 }
 
 export default function NovaVisita() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-
   const me = useMemo(() => {
     const raw = localStorage.getItem("me");
     return raw ? (JSON.parse(raw) as Me) : null;
   }, []);
 
   const visitadorId = params.get("visitadorId") ?? "";
-
-  const [visitadorNome, setVisitadorNome] = useState<string>("Carregando...");
+  const [visitadorNome, setVisitadorNome] = useState("Carregando...");
   const [loadingVisitador, setLoadingVisitador] = useState(false);
 
-  const [data, setData] = useState("");
-  const [hora, setHora] = useState("");
-  const [nomeCliente, setNomeCliente] = useState("");
+  const [data, setData]                   = useState("");
+  const [hora, setHora]                   = useState("");
+  const [nomeCliente, setNomeCliente]     = useState("");
   const [telefoneCliente, setTelefoneCliente] = useState("");
-  const [chaves, setChaves] = useState("");
-  const [observacoes, setObservacoes] = useState("");
+  const [chaves, setChaves]               = useState("");
+  const [observacoes, setObservacoes]     = useState("");
   const [duracaoMinutos, setDuracaoMinutos] = useState<number | "">("");
   const [enderecoImovel, setEnderecoImovel] = useState("");
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const backendDateTime = useMemo(() => {
-    if (!data || !hora) return "";
-    return toBackendOffsetDateTime(data, hora);
-  }, [data, hora]);
+  const [loading, setLoading]             = useState(false);
+  const [error, setError]                 = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadVisitadorName() {
+    async function load() {
       if (!visitadorId) return;
-
       setLoadingVisitador(true);
       try {
-        const visitadores = await getVisitadores();
-        const found = visitadores.find((v) => v.id === visitadorId);
+        const vs = await getVisitadores();
+        const found = vs.find(v => v.id === visitadorId);
         setVisitadorNome(found?.login ?? "Visitador selecionado");
-      } catch {
-        setVisitadorNome("Visitador selecionado");
-      } finally {
-        setLoadingVisitador(false);
-      }
+      } catch { setVisitadorNome("Visitador selecionado"); }
+      finally { setLoadingVisitador(false); }
     }
-
-    loadVisitadorName();
+    load();
   }, [visitadorId]);
 
-  if (!me) {
+  if (!me || !visitadorId) {
     return (
-      <div className="min-h-screen px-4 py-6">
-        <div className="mx-auto max-w-3xl rounded-3xl border bg-white p-8 shadow-sm">
-          <p className="text-slate-700">Voce nao esta autenticado.</p>
-          <a href="/login" className="mt-3 inline-block text-sm text-sky-700 underline">
-            Ir para login
-          </a>
+      <AppLayout>
+        <div className="alert alert-error">
+          {!me ? "Você não está autenticado." : "Nenhum visitador selecionado. Volte para a Agenda."}
         </div>
-      </div>
-    );
-  }
-
-  if (!visitadorId) {
-    return (
-      <div className="min-h-screen px-4 py-6">
-        <div className="mx-auto max-w-3xl rounded-3xl border bg-white p-8 shadow-sm">
-          <p className="text-sm text-rose-700">
-            Nenhum visitador selecionado. Volte para a Agenda e selecione um visitador.
-          </p>
-          <Button variant="outline" className="mt-4" onClick={() => navigate("/agenda")}>
-            Voltar
-          </Button>
-        </div>
-      </div>
+        <button className="btn btn-outline" onClick={() => navigate("/agenda")} style={{ marginTop: "1rem" }}>
+          <ArrowLeft size={15} /> Voltar
+        </button>
+      </AppLayout>
     );
   }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-
-    if (!data || !hora) {
-      setError("Preencha a data e a hora.");
-      return;
-    }
-
-    if (!nomeCliente.trim() || !telefoneCliente.trim() || !chaves.trim()) {
-      setError("Preencha nome do cliente, telefone e chaves.");
-      return;
-    }
-
-    if (duracaoMinutos !== "" && duracaoMinutos < 0) {
-      setError("A duracao nao pode ser negativa.");
-      return;
-    }
-
+    e.preventDefault(); setError(null);
+    if (!data || !hora) { setError("Preencha a data e a hora."); return; }
+    if (!nomeCliente.trim() || !telefoneCliente.trim() || !chaves.trim()) { setError("Preencha nome, telefone e chaves."); return; }
     setLoading(true);
     try {
       await createVisita({
@@ -151,203 +82,138 @@ export default function NovaVisita() {
         nome_cliente: nomeCliente.trim(),
         telefone_cliente: telefoneCliente.trim(),
         chaves: chaves.trim(),
-        observacoes: observacoes.trim() ? observacoes.trim() : undefined,
+        observacoes: observacoes.trim() || undefined,
         duracao_minutos: duracaoMinutos === "" ? undefined : duracaoMinutos,
         endereco_imovel: enderecoImovel.trim() || undefined,
       });
-
       navigate("/agenda");
     } catch (err) {
-      setError(
-        getApiErrorMessage(
-          err,
-          "Nao foi possivel criar a visita. Verifique os campos e tente novamente."
-        )
-      );
-    } finally {
-      setLoading(false);
-    }
+      setError(getApiErrorMessage(err, "Não foi possível criar a visita."));
+    } finally { setLoading(false); }
   }
 
   return (
-    <AppShell>
-      <PageHeader
-        title="Nova visita"
-        description="Preencha os dados para criar um novo agendamento."
-        actions={
-          <Button variant="outline" onClick={() => navigate(-1)} disabled={loading}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-        }
-      />
+    <AppLayout>
+      {/* Header */}
+      <div className="page-header-row">
+        <div>
+          <p className="page-subtitle">Agenda</p>
+          <h1 className="page-title">Nova visita</h1>
+        </div>
+        <div className="page-header-actions">
+          <button className="btn btn-outline" onClick={() => navigate(-1)} disabled={loading}>
+            <ArrowLeft size={15} /> Voltar
+          </button>
+        </div>
+      </div>
 
-      <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="grid gap-6">
-          <Card className="rounded-3xl">
-            <CardHeader>
-              <CardTitle>Dados do agendamento</CardTitle>
-            </CardHeader>
-
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="data">Data</Label>
-                <Input
-                  id="data"
-                  type="date"
-                  value={data}
-                  onChange={(e) => setData(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="hora">Hora</Label>
-                <Input
-                  id="hora"
-                  type="time"
-                  value={hora}
-                  onChange={(e) => setHora(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="duracao">Duracao (minutos)</Label>
-                <Input
-                  id="duracao"
-                  type="number"
-                  min={0}
-                  value={duracaoMinutos}
-                  onChange={(e) =>
-                    setDuracaoMinutos(e.target.value === "" ? "" : Number(e.target.value))
-                  }
-                  placeholder="Ex: 30"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="chaves">Chaves</Label>
-                <Input
-                  id="chaves"
-                  value={chaves}
-                  onChange={(e) => setChaves(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="enderecoImovel">Endereço do imóvel</Label>
-                <Input
-                  id="enderecoImovel"
-                  value={enderecoImovel}
-                  onChange={(e) => setEnderecoImovel(e.target.value)}
-                  placeholder="Ex: Rua das Flores, 123, Apto 4, Jardim Primavera, São Paulo - SP"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-3xl">
-            <CardHeader>
-              <CardTitle>Dados do cliente</CardTitle>
-            </CardHeader>
-
-            <CardContent className="grid gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="nomeCliente">Nome do cliente</Label>
-                <Input
-                  id="nomeCliente"
-                  value={nomeCliente}
-                  onChange={(e) => setNomeCliente(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="telefoneCliente">Telefone do cliente</Label>
-                  <Input
-                    id="telefoneCliente"
-                    value={telefoneCliente}
-                    onChange={(e) => setTelefoneCliente(e.target.value)}
-                    required
-                  />
+      {/* Two-column layout — collapses on mobile via class */}
+      <form onSubmit={handleSubmit} className="two-col-form" style={{ display: "flex", gap: "1.25rem", alignItems: "flex-start" }}>
+        {/* Main fields */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          {/* Agendamento */}
+          <div className="uni-card">
+            <div className="uni-card-header">
+              <span className="uni-card-title">
+                <Clock size={12} style={{ display: "inline", marginRight: "0.35rem", verticalAlign: "middle" }} />
+                Dados do agendamento
+              </span>
+            </div>
+            <div className="uni-card-body" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div className="form-grid-2">
+                <div className="form-group">
+                  <label className="form-label">Data</label>
+                  <input className="form-input" type="date" value={data} onChange={e => setData(e.target.value)} required />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="visitador">Visitador</Label>
-                  <Input
-                    id="visitador"
-                    value={loadingVisitador ? "Carregando..." : visitadorNome}
-                    disabled
-                  />
+                <div className="form-group">
+                  <label className="form-label">Hora</label>
+                  <input className="form-input" type="time" value={hora} onChange={e => setHora(e.target.value)} required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Duração (minutos)</label>
+                  <input className="form-input" type="number" min={0} value={duracaoMinutos}
+                    onChange={e => setDuracaoMinutos(e.target.value === "" ? "" : Number(e.target.value))}
+                    placeholder="Ex: 30" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Chaves</label>
+                  <input className="form-input" value={chaves} onChange={e => setChaves(e.target.value)} required />
+                </div>
+                <div className="form-group form-grid-full">
+                  <label className="form-label">
+                    <MapPin size={11} style={{ display: "inline", marginRight: "0.3rem", verticalAlign: "middle" }} />
+                    Endereço do imóvel
+                  </label>
+                  <input className="form-input" value={enderecoImovel} onChange={e => setEnderecoImovel(e.target.value)}
+                    placeholder="Ex: Rua das Flores, 123, Apto 4, São Paulo - SP" />
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="observacoes">Observacoes</Label>
-                <Textarea
-                  id="observacoes"
-                  rows={5}
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  placeholder="Informacoes adicionais da visita"
-                />
+          {/* Cliente */}
+          <div className="uni-card">
+            <div className="uni-card-header">
+              <span className="uni-card-title">
+                <UserRound size={12} style={{ display: "inline", marginRight: "0.35rem", verticalAlign: "middle" }} />
+                Dados do cliente
+              </span>
+            </div>
+            <div className="uni-card-body" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div className="form-group">
+                <label className="form-label">Nome do cliente</label>
+                <input className="form-input" value={nomeCliente} onChange={e => setNomeCliente(e.target.value)} required />
               </div>
-            </CardContent>
-          </Card>
+              <div className="form-grid-2">
+                <div className="form-group">
+                  <label className="form-label">Telefone</label>
+                  <input className="form-input" value={telefoneCliente} onChange={e => setTelefoneCliente(e.target.value)} required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Visitador</label>
+                  <input className="form-input" value={loadingVisitador ? "Carregando..." : visitadorNome} disabled />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Observações</label>
+                <textarea className="form-textarea" rows={4} value={observacoes} onChange={e => setObservacoes(e.target.value)}
+                  placeholder="Informações adicionais da visita" />
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div>
-          <Card className="rounded-3xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarPlus className="h-4 w-4" />
+        {/* Sidebar */}
+        <div className="two-col-sidebar" style={{ width: 300, flexShrink: 0, position: "sticky", top: "74px" }}>
+          <div className="uni-card">
+            <div className="uni-card-header">
+              <span className="uni-card-title">
+                <CalendarPlus size={12} style={{ display: "inline", marginRight: "0.35rem", verticalAlign: "middle" }} />
                 Resumo
-              </CardTitle>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-                <p>
-                  <span className="font-medium text-slate-900">Criado por:</span>{" "}
-                  {me.login}
-                </p>
-
-                <p className="mt-2 flex items-center gap-2">
-                  <UserRound className="h-4 w-4 text-slate-500" />
-                  <span>
-                    <span className="font-medium text-slate-900">Visitador:</span>{" "}
-                    {loadingVisitador ? "Carregando..." : visitadorNome}
-                  </span>
-                </p>
-
-                <p className="mt-2">
-                  <span className="font-medium text-slate-900">Visitador ID:</span>{" "}
-                  {visitadorId}
-                </p>
-
-                <p className="mt-2">
-                  <span className="font-medium text-slate-900">Data e hora enviadas:</span>{" "}
-                  {backendDateTime ? <code>{backendDateTime}</code> : <code>-</code>}
-                </p>
+              </span>
+            </div>
+            <div className="uni-card-body" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div className="alert alert-info" style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                <div><span style={{ fontWeight: 600, color: "#0d1b2e" }}>Criado por:</span> {me.login}</div>
+                <div><span style={{ fontWeight: 600, color: "#0d1b2e" }}>Visitador:</span> {loadingVisitador ? "..." : visitadorNome}</div>
+                {data && hora && (
+                  <div><span style={{ fontWeight: 600, color: "#0d1b2e" }}>Data/hora:</span> {data} às {hora}</div>
+                )}
+                {enderecoImovel && (
+                  <div><span style={{ fontWeight: 600, color: "#0d1b2e" }}>Endereço:</span> {enderecoImovel}</div>
+                )}
               </div>
 
-              {error ? (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                  {error}
-                </div>
-              ) : null}
+              {error && <div className="alert alert-error">{error}</div>}
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                <Save className="mr-2 h-4 w-4" />
+              <button type="submit" className="btn btn-gold" style={{ width: "100%", justifyContent: "center" }} disabled={loading}>
+                <Save size={15} />
                 {loading ? "Criando..." : "Criar visita"}
-              </Button>
-            </CardContent>
-          </Card>
+              </button>
+            </div>
+          </div>
         </div>
       </form>
-    </AppShell>
+    </AppLayout>
   );
 }

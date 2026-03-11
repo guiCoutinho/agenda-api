@@ -1,111 +1,108 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppShell } from "@/components/layout/app-shell";
-import { PageHeader } from "@/components/layout/page-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { UserPlus, ArrowLeft, Check } from "lucide-react";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { createUser, type UserRole } from "@/services/users";
 
 export default function NovoUsuario() {
   const navigate = useNavigate();
-  const [login, setLogin] = useState("");
-  const [role, setRole] = useState<UserRole>("ATENDENTE");
+  const [login, setLogin]   = useState("");
+  const [role, setRole]     = useState<UserRole>("ATENDENTE");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError]   = useState("");
   const [success, setSuccess] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-    setLoading(true);
-
+    e.preventDefault(); setError(""); setSuccess(""); setLoading(true);
     try {
       await createUser({ login, role });
       setSuccess('Usuário criado com sucesso. Senha inicial: "123".');
-      setLogin("");
-      setRole("ATENDENTE");
-    } catch {
-      setError("Não foi possível criar o usuário.");
-    } finally {
-      setLoading(false);
-    }
+      setLogin(""); setRole("ATENDENTE");
+    } catch { setError("Não foi possível criar o usuário."); }
+    finally { setLoading(false); }
   }
 
   return (
-    <AppShell>
-      <div className="space-y-6">
-        <PageHeader
-          title="Novo usuário"
-          description="Crie usuários do sistema. A senha inicial será 123 e deverá ser trocada no primeiro acesso."
-        />
+    <AppLayout>
+      {/* Header */}
+      <div className="page-header-row">
+        <div>
+          <p className="page-subtitle">Administração</p>
+          <h1 className="page-title">Novo usuário</h1>
+        </div>
+        <div className="page-header-actions">
+          <button className="btn btn-outline" onClick={() => navigate("/agenda")}>
+            <ArrowLeft size={15} /> Voltar à agenda
+          </button>
+        </div>
+      </div>
 
-        <Card className="max-w-xl rounded-3xl">
-          <CardHeader>
-            <CardTitle>Cadastrar usuário</CardTitle>
-            <CardDescription>
-              Escolha o login e o tipo de acesso.
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="login">Login</Label>
-                <Input
-                  id="login"
+      {/* Two-col on desktop, stacked on mobile */}
+      <div className="two-col-form" style={{ display: "flex", gap: "1.25rem", alignItems: "flex-start" }}>
+        {/* Form */}
+        <div className="uni-card" style={{ flex: 1, minWidth: 0 }}>
+          <div className="uni-card-header">
+            <span className="uni-card-title">Dados do usuário</span>
+          </div>
+          <div className="uni-card-body">
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.15rem" }}>
+              <div className="form-group">
+                <label className="form-label">Login</label>
+                <input
+                  className="form-input"
                   value={login}
-                  onChange={(e) => setLogin(e.target.value)}
+                  onChange={e => setLogin(e.target.value)}
+                  placeholder="Ex: joao.silva"
                   required
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label>Perfil</Label>
-                <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o perfil" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ADMIN">Admin</SelectItem>
-                    <SelectItem value="ATENDENTE">Atendente</SelectItem>
-                    <SelectItem value="VISITADOR">Visitador</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="form-group">
+                <label className="form-label">Perfil de acesso</label>
+                <select className="form-select" value={role} onChange={e => setRole(e.target.value as UserRole)}>
+                  <option value="ADMIN">Admin</option>
+                  <option value="ATENDENTE">Atendente</option>
+                  <option value="VISITADOR">Visitador</option>
+                </select>
               </div>
 
-              {error ? (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                  {error}
+              {error   && <div className="alert alert-error">{error}</div>}
+              {success && (
+                <div className="alert alert-success" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Check size={14} /> {success}
                 </div>
-              ) : null}
+              )}
 
-              {success ? (
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                  {success}
-                </div>
-              ) : null}
-
-              <Button type="submit" disabled={loading}>
-                {loading ? "Criando..." : "Criar usuário"}
-              </Button>
-
-              <Button type="button" variant="outline" onClick={() => navigate("/agenda")}>
-                Voltar
-              </Button>
+              <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap" }}>
+                <button type="submit" className="btn btn-primary" disabled={loading}>
+                  <UserPlus size={15} /> {loading ? "Criando..." : "Criar usuário"}
+                </button>
+                <button type="button" className="btn btn-outline" onClick={() => navigate("/agenda")}>
+                  Cancelar
+                </button>
+              </div>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+
+        {/* Info sidebar */}
+        <div className="two-col-sidebar" style={{ width: 300, flexShrink: 0 }}>
+          <div className="uni-card">
+            <div className="uni-card-header">
+              <span className="uni-card-title">Informações</span>
+            </div>
+            <div className="uni-card-body" style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+              <div className="alert alert-info">
+                A senha inicial do usuário será <strong>123</strong>. Ele precisará trocá-la no primeiro acesso.
+              </div>
+              <div style={{ fontSize: "0.81rem", color: "#5a6a7e", lineHeight: 1.65, display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <p style={{ margin: 0 }}><strong style={{ color: "#0d1b2e" }}>Admin</strong> — acesso total, incluindo criação de usuários.</p>
+                <p style={{ margin: 0 }}><strong style={{ color: "#0d1b2e" }}>Atendente</strong> — pode criar e visualizar visitas.</p>
+                <p style={{ margin: 0 }}><strong style={{ color: "#0d1b2e" }}>Visitador</strong> — visualiza apenas suas próprias visitas.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </AppShell>
+    </AppLayout>
   );
 }
