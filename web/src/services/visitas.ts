@@ -34,3 +34,11 @@ export async function createVisita(payload: CreateVisitaRequest) {
   const res = await api.post("/api/visita", payload);
   return res.data;
 }
+export async function transferirVisita(visitaId: string, novoVisitadorId: string) {
+  const res = await api.put<Visita>(`/api/visita/${visitaId}/transferir`, { novoVisitadorId });
+  return res.data;
+}
+
+export async function cancelarVisita(visitaId: string) {
+  await api.delete(`/api/visita/${visitaId}`);
+}

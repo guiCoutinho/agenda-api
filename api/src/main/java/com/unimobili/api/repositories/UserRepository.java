@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface UserRepository extends JpaRepository<User, UUID> {
     UserDetails findByLogin(String login);
     List<User> findByRoleOrderByLoginAsc(UserRoles role);
+    List<User> findAllByOrderByLoginAsc();
 }

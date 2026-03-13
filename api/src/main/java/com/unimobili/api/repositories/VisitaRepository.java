@@ -47,4 +47,21 @@ public interface VisitaRepository extends JpaRepository<Visita, UUID> {
             @Param("visitadorId") UUID visitadorId,
             @Param("currentDate") OffsetDateTime currentDate
     );
+    @Query(value = """
+    SELECT EXISTS (
+      SELECT 1
+      FROM visita v
+      WHERE v.ativa = true
+        AND v.designado_a_id = :visitadorId
+        AND v.id != :excludeId
+        AND tstzrange(v.data_hora, v.data_hora_fim, '[)') &&
+            tstzrange(:inicio, :fim, '[)')
+    )
+    """, nativeQuery = true)
+    boolean existsOverlappingVisitExcluding(
+            @Param("visitadorId") UUID visitadorId,
+            @Param("inicio") OffsetDateTime inicio,
+            @Param("fim") OffsetDateTime fim,
+            @Param("excludeId") UUID excludeId
+    );
 }

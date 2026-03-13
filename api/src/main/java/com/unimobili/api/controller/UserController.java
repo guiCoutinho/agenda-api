@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
@@ -26,6 +27,17 @@ public class UserController {
     public ResponseEntity<List<UserListDTO>> listVisitadores() {
         List<UserListDTO> users = userRepository
                 .findByRoleOrderByLoginAsc(UserRoles.VISITADOR)
+                .stream()
+                .map(u -> new UserListDTO(u.getId(), u.getLogin(), u.getRole()))
+                .toList();
+
+        return ResponseEntity.ok(users);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<UserListDTO>> listAllUsers() {
+        List<UserListDTO> users = userRepository
+                .findAllByOrderByLoginAsc()
                 .stream()
                 .map(u -> new UserListDTO(u.getId(), u.getLogin(), u.getRole()))
                 .toList();
@@ -76,5 +88,42 @@ public class UserController {
         userRepository.save(user);
 
         return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/reset-password")
+    public ResponseEntity resetPassword(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable UUID id
+    ) {
+        if (currentUser.getId().equals(id)) {
+            return ResponseEntity.badRequest().body("Use a opção 'Trocar senha' para alterar sua própria senha.");
+        }
+
+        User target = userRepository.findById(id)
+                .orElseThrow(() -> new java.util.NoSuchElementException("Usuário não encontrado."));
+
+        target.setPassword(passwordEncoder.encode("123"));
+        target.setMustChangePassword(true);
+        userRepository.save(target);
+
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity deleteUser(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable UUID id
+    ) {
+        if (currentUser.getId().equals(id)) {
+            return ResponseEntity.badRequest().body("Você não pode excluir sua própria conta.");
+        }
+
+        if (!userRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        userRepository.deleteById(id);
+
+        return ResponseEntity.noContent().build();
     }
 }

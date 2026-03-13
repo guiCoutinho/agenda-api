@@ -118,7 +118,7 @@ export default function Agenda() {
         </div>
         <div className="page-header-actions">
           {me.role === "ADMIN" && (
-            <button className="btn btn-outline btn-sm" onClick={() => navigate("/usuarios/novo")}>
+            <button className="btn btn-outline btn-sm" onClick={() => navigate("/usuarios")}>
               <UserRound size={13} /> Usuários
             </button>
           )}

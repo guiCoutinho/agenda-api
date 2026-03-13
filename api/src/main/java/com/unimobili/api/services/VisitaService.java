@@ -142,4 +142,49 @@ public class VisitaService {
         visita.setStatus(CANCELADA);
         repository.save(visita);
     }
+
+    public VisitaResponseDTO transferirVisita(UUID visitaId, UUID novoVisitadorId) {
+        User usuarioLogado = (User) SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal();
+
+        Visita visita = repository.findById(visitaId)
+                .orElseThrow(() -> new java.util.NoSuchElementException("Visita não encontrada."));
+
+        boolean isAdmin     = usuarioLogado.getRole() == UserRoles.ADMIN;
+        boolean isDesignado = visita.getDesignadoA().getId().equals(usuarioLogado.getId());
+
+        if (!isAdmin && !isDesignado) {
+            throw new AccessDeniedException("Você não tem permissão para transferir esta visita.");
+        }
+
+        if (Boolean.FALSE.equals(visita.getAtiva())) {
+            throw new IllegalArgumentException("Não é possível transferir uma visita cancelada.");
+        }
+
+        if (novoVisitadorId.equals(visita.getDesignadoA().getId())) {
+            throw new IllegalArgumentException("O visitador de destino já é o responsável por esta visita.");
+        }
+
+        User novoVisitador = userRepository.findById(novoVisitadorId)
+                .orElseThrow(() -> new java.util.NoSuchElementException("Visitador de destino não encontrado."));
+
+        if (novoVisitador.getRole() != UserRoles.VISITADOR) {
+            throw new IllegalArgumentException("O usuário de destino não é um visitador.");
+        }
+
+        boolean sobrepoe = repository.existsOverlappingVisitExcluding(
+                novoVisitadorId, visita.getData_hora(), visita.getData_hora_fim(), visitaId
+        );
+
+        if (sobrepoe) {
+            throw new IllegalArgumentException("O visitador de destino já possui uma visita nesse horário.");
+        }
+
+        visita.setDesignadoA(novoVisitador);
+        repository.save(visita);
+
+        return toDTO(visita);
+    }
 }

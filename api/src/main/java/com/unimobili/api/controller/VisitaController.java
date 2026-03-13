@@ -2,6 +2,7 @@ package com.unimobili.api.controller;
 
 import com.unimobili.api.domain.visita.VisitaRequestDTO;
 import com.unimobili.api.domain.visita.VisitaResponseDTO;
+import com.unimobili.api.domain.visita.TransferirVisitaDTO;
 import com.unimobili.api.services.VisitaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -43,4 +44,12 @@ public class VisitaController {
         return ResponseEntity.ok(visitas);
     }
 
+    @PutMapping("/{id}/transferir")
+    public ResponseEntity<VisitaResponseDTO> transferirVisita(
+            @PathVariable UUID id,
+            @RequestBody TransferirVisitaDTO body
+    ) {
+        VisitaResponseDTO visita = visitaService.transferirVisita(id, body.novoVisitadorId());
+        return ResponseEntity.ok(visita);
+    }
 }

@@ -59,8 +59,8 @@ export function Navbar({ me, onRefresh, loadingRefresh }: NavbarProps) {
       )}
       {isAdmin && (
         <button
-          className={`nav-link ${location.pathname === "/usuarios/novo" ? "active" : ""}`}
-          onClick={() => navigate("/usuarios/novo")}
+          className={`nav-link ${location.pathname.startsWith("/usuarios") ? "active" : ""}`}
+          onClick={() => navigate("/usuarios")}
           style={mobile ? { width: "100%", textAlign: "left" } : {}}
         >
           <UserPlus size={13} />

@@ -1,23 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Clock3, MessageCircle, RefreshCw } from "lucide-react";
+import { CalendarDays, Clock3, MessageCircle, RefreshCw, ArrowRightLeft } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatDateOnly, formatDateTime, formatTime } from "@/lib/format";
-import { getUpcomingByVisitador, type Visita } from "@/services/visitas";
+import { getUpcomingByVisitador, transferirVisita, type Visita } from "@/services/visitas";
+import { getVisitadores, type Visitador } from "@/services/visitadores";
+import { getApiErrorMessage } from "@/services/api";
 
 type Me = { id: string; login: string; role: string };
 
 export default function VisitadorUpcoming() {
   const [loading, setLoading] = useState(true);
   const [visitas, setVisitas] = useState<Visita[]>([]);
+  const [visitadores, setVisitadores] = useState<Visitador[]>([]);
+  const [transferModal, setTransferModal] = useState<Visita | null>(null);
   const me: Me | null = JSON.parse(localStorage.getItem("me") || "null");
 
   async function loadData() {
     if (!me?.id) { setLoading(false); return; }
     setLoading(true);
-    try { const data = await getUpcomingByVisitador(me.id); setVisitas(data); }
-    finally { setLoading(false); }
+    try {
+      const [data, visitadoresList] = await Promise.all([
+        getUpcomingByVisitador(me.id),
+        getVisitadores().catch(() => [] as Visitador[]),
+      ]);
+      setVisitas(data);
+      setVisitadores(visitadoresList.filter(v => v.id !== me.id));
+    } finally { setLoading(false); }
   }
+
   useEffect(() => { loadData(); }, []);
 
   function isToday(ds: string) {
@@ -32,10 +43,10 @@ export default function VisitadorUpcoming() {
     return `https://wa.me/${cc}?text=${encodeURIComponent("Olá! Estou entrando em contato sobre a visita agendada.")}`;
   }
 
-  const visitasHoje    = useMemo(() => visitas.filter(v => isToday(v.data_hora)), [visitas]);
-  const proximosDias   = useMemo(() => visitas.filter(v => !isToday(v.data_hora)), [visitas]);
-  const nextVisita     = visitas[0] ?? null;
-  const totalSemana    = useMemo(() => {
+  const visitasHoje   = useMemo(() => visitas.filter(v => isToday(v.data_hora)), [visitas]);
+  const proximosDias  = useMemo(() => visitas.filter(v => !isToday(v.data_hora)), [visitas]);
+  const nextVisita    = visitas[0] ?? null;
+  const totalSemana   = useMemo(() => {
     const now = new Date(), in7 = new Date(); in7.setDate(now.getDate() + 7);
     return visitas.filter(v => { const d = new Date(v.data_hora); return d >= now && d <= in7; }).length;
   }, [visitas]);
@@ -109,7 +120,16 @@ export default function VisitadorUpcoming() {
                     </span>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
-                    {visitasHoje.map(v => <VisitaCard key={v.id} visita={v} today getWa={getWhatsAppLink} />)}
+                    {visitasHoje.map(v => (
+                      <VisitaCard
+                        key={v.id}
+                        visita={v}
+                        today
+                        getWa={getWhatsAppLink}
+                        onTransferir={() => setTransferModal(v)}
+                        hasVisitadores={visitadores.length > 0}
+                      />
+                    ))}
                   </div>
                 </div>
               )}
@@ -122,7 +142,16 @@ export default function VisitadorUpcoming() {
                     </span>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
-                    {proximosDias.map(v => <VisitaCard key={v.id} visita={v} today={false} getWa={getWhatsAppLink} />)}
+                    {proximosDias.map(v => (
+                      <VisitaCard
+                        key={v.id}
+                        visita={v}
+                        today={false}
+                        getWa={getWhatsAppLink}
+                        onTransferir={() => setTransferModal(v)}
+                        hasVisitadores={visitadores.length > 0}
+                      />
+                    ))}
                   </div>
                 </div>
               )}
@@ -130,11 +159,26 @@ export default function VisitadorUpcoming() {
           )}
         </div>
       </div>
+
+      {/* Transfer Modal */}
+      {transferModal && (
+        <TransferirModal
+          visita={transferModal}
+          visitadores={visitadores}
+          onClose={() => setTransferModal(null)}
+          onSuccess={() => { setTransferModal(null); loadData(); }}
+        />
+      )}
     </AppLayout>
   );
 }
 
-function VisitaCard({ visita, today, getWa }: { visita: Visita; today: boolean; getWa: (p: string) => string }) {
+function VisitaCard({
+  visita, today, getWa, onTransferir, hasVisitadores
+}: {
+  visita: Visita; today: boolean; getWa: (p: string) => string;
+  onTransferir: () => void; hasVisitadores: boolean;
+}) {
   return (
     <div className={`visita-card ${today ? "today-card" : ""}`}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap" }}>
@@ -160,12 +204,98 @@ function VisitaCard({ visita, today, getWa }: { visita: Visita; today: boolean; 
             {visita.endereco_imovel && <span>📍 {visita.endereco_imovel}</span>}
           </div>
         </div>
+        {hasVisitadores && (
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={onTransferir}
+            title="Transferir visita para outro visitador"
+            style={{ flexShrink: 0, alignSelf: "flex-start" }}
+          >
+            <ArrowRightLeft size={12} /> Transferir
+          </button>
+        )}
       </div>
       {visita.observacoes && (
         <div style={{ marginTop: "0.65rem", background: "#f9f9f9", borderRadius: 8, padding: "0.45rem 0.7rem", fontSize: "0.78rem", color: "#6b7280" }}>
           {visita.observacoes}
         </div>
       )}
+    </div>
+  );
+}
+
+function TransferirModal({
+  visita, visitadores, onClose, onSuccess
+}: {
+  visita: Visita;
+  visitadores: Visitador[];
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [selectedId, setSelectedId] = useState(visitadores[0]?.id ?? "");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleConfirm() {
+    if (!selectedId) return;
+    setLoading(true); setError("");
+    try {
+      await transferirVisita(visita.id, selectedId);
+      onSuccess();
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Não foi possível transferir a visita. O horário pode estar ocupado."));
+    } finally { setLoading(false); }
+  }
+
+  const { formatDateOnly, formatTime } = { formatDateOnly: (s: string) => new Date(s).toLocaleDateString("pt-BR"), formatTime: (s: string) => new Date(s).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+      <div style={{ background: "#fff", borderRadius: 16, padding: "2rem", maxWidth: 440, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
+          <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <ArrowRightLeft size={18} color="#2563eb" />
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#0d1b2e" }}>Transferir visita</h3>
+            <p style={{ margin: 0, fontSize: "0.8rem", color: "#5a6a7e" }}>
+              {visita.nome_cliente} · {formatDateOnly(visita.data_hora)} às {formatTime(visita.data_hora)}
+            </p>
+          </div>
+        </div>
+
+        <div className="form-group" style={{ marginBottom: "1.25rem" }}>
+          <label className="form-label">Transferir para</label>
+          <select
+            className="form-select"
+            value={selectedId}
+            onChange={e => setSelectedId(e.target.value)}
+          >
+            {visitadores.length === 0
+              ? <option value="">Nenhum visitador disponível</option>
+              : visitadores.map(v => <option key={v.id} value={v.id}>{v.login}</option>)
+            }
+          </select>
+          <p style={{ marginTop: "0.5rem", fontSize: "0.77rem", color: "#5a6a7e" }}>
+            A transferência só será realizada se o visitador de destino estiver com o horário vago.
+          </p>
+        </div>
+
+        {error && <div className="alert alert-error" style={{ marginBottom: "1rem" }}>{error}</div>}
+
+        <div style={{ display: "flex", gap: "0.65rem", justifyContent: "flex-end" }}>
+          <button className="btn btn-outline" onClick={onClose} disabled={loading}>
+            Cancelar
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={handleConfirm}
+            disabled={loading || !selectedId || visitadores.length === 0}
+          >
+            <ArrowRightLeft size={14} /> {loading ? "Transferindo..." : "Confirmar transferência"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

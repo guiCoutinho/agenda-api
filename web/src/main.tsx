@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import NovaVisita from "./pages/NovaVisita";
 import VisitadorUpcoming from "./pages/VisitadorUpcoming";
 import NovoUsuario from "./pages/NovoUsuario";
+import GerenciarUsuarios from "./pages/GerenciarUsuarios";
 import TrocarSenha from "./pages/TrocarSenha";
 
 type UserRole = "ADMIN" | "ATENDENTE" | "VISITADOR";
@@ -31,6 +32,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <Route path="/agenda" element={<RequireRole allowed={["ADMIN", "ATENDENTE"]}><Agenda /></RequireRole>} />
         <Route path="/visitas/nova" element={<RequireRole allowed={["ADMIN", "ATENDENTE"]}><NovaVisita /></RequireRole>} />
         <Route path="/usuarios/novo" element={<RequireRole allowed={["ADMIN"]}><NovoUsuario /></RequireRole>} />
+        <Route path="/usuarios" element={<RequireRole allowed={["ADMIN"]}><GerenciarUsuarios /></RequireRole>} />
         <Route path="/trocar-senha" element={<TrocarSenha />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
